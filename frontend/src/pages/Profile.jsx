@@ -3,8 +3,26 @@ import { useAuth } from '../context/AuthContext';
 import { Camera, Mail, Shield, Bell, CreditCard, LogOut, Trash2, CheckCircle2 } from 'lucide-react';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('general');
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError('');
+    const res = await updateProfile(name, email);
+    setIsSaving(false);
+    if (res?.success) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } else {
+      setSaveError(res?.error || 'Failed to save changes.');
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 lg:space-y-8 pb-10">
@@ -79,7 +97,8 @@ const Profile = () => {
                       <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Full Name</label>
                       <input 
                         type="text" 
-                        defaultValue={user?.name || ''} 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-medium text-gray-800 dark:text-gray-200 shadow-inner"
                       />
                     </div>
@@ -91,15 +110,23 @@ const Profile = () => {
                         </div>
                         <input 
                           type="email" 
-                          defaultValue={user?.email || ''} 
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-medium text-gray-800 dark:text-gray-200 shadow-inner"
                         />
                       </div>
                     </div>
                   </div>
-                  <div className="pt-4 flex justify-end">
-                    <button className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all hover:shadow-lg cursor-pointer">
-                      Save Changes
+                  <div className="pt-4 flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <span className={"text-sm font-medium text-emerald-600 transition-opacity duration-300 " + (saveSuccess ? "opacity-100" : "opacity-0")}>Successfully saved!</span>
+                      {saveError && <span className="text-sm font-medium text-red-500">{saveError}</span>}
+                    </div>
+                    <button 
+                      onClick={handleSave} 
+                      disabled={isSaving}
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-75 disabled:cursor-wait text-white font-bold rounded-xl shadow-md transition-all hover:shadow-lg cursor-pointer flex items-center">
+                      {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </div>
