@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { UploadCloud, X, FileText, CheckCircle } from 'lucide-react';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const UploadModal = ({ isOpen, onClose }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -23,18 +29,38 @@ const UploadModal = ({ isOpen, onClose }) => {
     handleFileSelection(e.dataTransfer.files[0]);
   };
 
-  const handleFileSelection = (file) => {
-    if (file) {
+  const handleFileSelection = async (file) => {
+    if (file && user) {
       setIsUploading(true);
-      // Simulate upload and loading states for AI generation
-      setTimeout(() => {
+      setErrorMsg("");
+      
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('title', file.name.split('.')[0]);
+
+      try {
+        const config = {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${user.token}`,
+          },
+        };
+
+        const { data } = await axios.post('http://localhost:5000/api/documents', formData, config);
+        
         setIsUploading(false);
         setUploadSuccess(true);
         setTimeout(() => {
           setUploadSuccess(false);
           onClose();
-        }, 2000);
-      }, 2000);
+          navigate(`/documents/${data._id}`, { state: { document: data }});
+        }, 1500);
+
+      } catch (error) {
+        console.error('Upload Error:', error);
+        setIsUploading(false);
+        setErrorMsg(error.response?.data?.message || 'Error uploading file');
+      }
     }
   };
 
@@ -78,7 +104,8 @@ const UploadModal = ({ isOpen, onClose }) => {
                     <UploadCloud size={32} />
                   </div>
                   <h4 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Click to upload or drag and drop</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">PDF, DOCX, or TXT (max. 50MB)</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">PDF ONLY (max. 10MB)</p>
+                  {errorMsg && <p className="text-xs text-red-500 font-bold mt-2">{errorMsg}</p>}
                   
                   <label className="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors cursor-pointer">
                     Browse Files

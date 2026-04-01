@@ -1,17 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DocumentCard from '../components/DocumentCard';
 import UploadModal from '../components/UploadModal';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const Documents = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const navigate = useNavigate();
-
   const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleDelete = (id) => {
-    setDocuments(documents.filter(doc => doc.id !== id));
+  const fetchDocuments = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const { data } = await axios.get('http://localhost:5000/api/documents', {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setDocuments(data);
+    } catch (error) {
+      console.error('Error fetching documents', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [user, isModalOpen]); // refetch when modal closes (new upload)
+
+  const handleDelete = async (id) => {
+    if(!window.confirm("Are you sure you want to delete this document?")) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/documents/${id}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setDocuments(documents.filter(doc => doc._id !== id));
+    } catch (error) {
+      console.error('Failed to delete document', error);
+    }
   };
 
   return (
@@ -30,20 +60,30 @@ const Documents = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {documents.map((doc) => (
-          <div key={doc.id} onClick={() => navigate(`/documents/${doc.id}`)}>
-             <DocumentCard 
-               title={doc.title} 
-               size={doc.size} 
-               date={doc.date} 
-               onDelete={() => handleDelete(doc.id)} 
-             />
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+           <Loader2 className="animate-spin mb-4" size={48} />
+           <p className="font-medium">Loading your library...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {documents.map((doc) => (
+            <div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1">
+               <DocumentCard 
+                 title={doc.title} 
+                 size="PDF" 
+                 date={new Date(doc.createdAt).toLocaleDateString()} 
+                 onDelete={(e) => {
+                   e.stopPropagation();
+                   handleDelete(doc._id);
+                 }} 
+               />
+            </div>
+          ))}
+        </div>
+      )}
 
-      {documents.length === 0 && (
+      {!loading && documents.length === 0 && (
         <div className="text-center py-20 bg-white dark:bg-gray-800 transition-colors rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
           <UploadCloud size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">No documents yet</h3>
