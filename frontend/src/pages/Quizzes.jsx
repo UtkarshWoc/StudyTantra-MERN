@@ -8,7 +8,8 @@ const Quizzes = () => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [selectedDocId, setSelectedDocId] = useState('');
-  const [quizData, setQuizData] = useState(null);
+  const [activeQuiz, setActiveQuiz] = useState(null);
+  const [quizCount, setQuizCount] = useState(5);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -39,13 +40,13 @@ const Quizzes = () => {
       if (!selectedDocId || !user) return;
       setLoadingQuiz(true);
       setError('');
-      setQuizData(null);
+      setActiveQuiz(null);
       try {
         const { data } = await axios.get(`http://localhost:5000/api/quizzes/document/${selectedDocId}`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         if (data.length > 0) {
-           setQuizData(data[0].questions);
+           setActiveQuiz(data[0]);
         }
       } catch (err) {
         console.error('Error fetching quiz', err);
@@ -61,10 +62,11 @@ const Quizzes = () => {
     setGenerating(true);
     setError('');
     try {
-      const { data } = await axios.post(`http://localhost:5000/api/quizzes/generate/${selectedDocId}`, {}, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      setQuizData(data.questions);
+      const { data } = await axios.post(`http://localhost:5000/api/quizzes/generate/${selectedDocId}`, 
+        { count: quizCount }, 
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setActiveQuiz(data.quiz);
     } catch (err) {
       setError(err.response?.data?.message || 'Error generating quiz');
     } finally {
@@ -101,11 +103,24 @@ const Quizzes = () => {
                 ))}
               </select>
             </div>
-            <div className="flex items-end">
+            <div className="w-full sm:w-32">
+               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Count</label>
+               <select 
+                value={quizCount} 
+                onChange={(e) => setQuizCount(Number(e.target.value))}
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium cursor-pointer"
+              >
+                <option value={5}>5 Qs</option>
+                <option value={10}>10 Qs</option>
+                <option value={15}>15 Qs</option>
+              </select>
+            </div>
+            
+            <div className="flex items-end w-full sm:w-auto mt-4 sm:mt-0">
               <button 
                 onClick={generateQuiz}
                 disabled={generating || loadingQuiz}
-                className="h-[50px] px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-[50px] w-full px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {generating ? <><Loader2 className="animate-spin mr-2" size={18}/> Generating AI Quiz...</> : <><Zap size={18} className="mr-2" /> Generate New Quiz</>}
               </button>
@@ -121,8 +136,8 @@ const Quizzes = () => {
              <Loader2 className="animate-spin mb-3" size={32} />
              <p>Loading quiz data...</p>
            </div>
-        ) : quizData && quizData.length > 0 ? (
-           <QuizEngine quizData={quizData} />
+        ) : activeQuiz ? (
+           <QuizEngine quiz={activeQuiz} />
         ) : selectedDocId && !generating ? (
            <div className="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center shadow-sm border border-gray-100 dark:border-gray-700 mx-auto flex flex-col items-center">
              <div className="bg-indigo-50 dark:bg-indigo-900 p-6 rounded-full text-indigo-400 mb-6">

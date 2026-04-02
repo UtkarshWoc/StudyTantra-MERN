@@ -8,6 +8,7 @@ const Flashcards = () => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [selectedDocId, setSelectedDocId] = useState('');
+  const [flashcardCount, setFlashcardCount] = useState(10);
   const [flashcards, setFlashcards] = useState(null);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [loadingCards, setLoadingCards] = useState(false);
@@ -34,30 +35,34 @@ const Flashcards = () => {
   }, [user]);
 
   // Fetch flashcards when document changes
-  useEffect(() => {
-    const fetchCards = async () => {
-      if (!selectedDocId || !user) return;
-      setLoadingCards(true);
-      setError('');
-      setFlashcards(null);
-      try {
-        const { data } = await axios.get(`http://localhost:5000/api/flashcards/${selectedDocId}`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-        if (data.length > 0) {
-           const mappedCards = data[0].cards.map(card => ({
-             id: card._id,
-             front: card.front,
-             back: card.back
-           }));
-           setFlashcards(mappedCards);
-        }
-      } catch (err) {
-        console.error('Error fetching cards', err);
-      } finally {
-        setLoadingCards(false);
+  const fetchCards = async () => {
+    if (!selectedDocId || !user) return;
+    setLoadingCards(true);
+    setError('');
+    setFlashcards(null);
+    try {
+      const { data } = await axios.get(`http://localhost:5000/api/flashcards/${selectedDocId}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      if (data && data.length > 0) {
+         const mappedCards = data.map(card => ({
+           id: card._id,
+           front: card.question,
+           back: card.answer,
+           topic: card.topic || 'General'
+         }));
+         setFlashcards(mappedCards);
+      } else {
+         setFlashcards([]);
       }
-    };
+    } catch (err) {
+      console.error('Error fetching cards', err);
+    } finally {
+      setLoadingCards(false);
+    }
+  };
+
+  useEffect(() => {
     fetchCards();
   }, [selectedDocId, user]);
 
@@ -66,13 +71,16 @@ const Flashcards = () => {
     setGenerating(true);
     setError('');
     try {
-      const { data } = await axios.post(`http://localhost:5000/api/flashcards/generate/${selectedDocId}`, {}, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      const mappedCards = data.cards.map(card => ({
+      const { data } = await axios.post(`http://localhost:5000/api/flashcards/generate/${selectedDocId}`, 
+        { count: flashcardCount }, 
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      
+      const mappedCards = data.flashcards.map(card => ({
         id: card._id,
-        front: card.front,
-        back: card.back
+        front: card.question,
+        back: card.answer,
+        topic: card.topic || 'General'
       }));
       setFlashcards(mappedCards);
     } catch (err) {
@@ -98,33 +106,47 @@ const Flashcards = () => {
           <Layers size={36} />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Review Your Flashcards</h1>
-        <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto font-medium leading-relaxed">Master the material with spaced repetition. These flashcards were uniquely generated from your recent documents.</p>
+        <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto font-medium leading-relaxed">Master the material with spaced repetition. These flashcards are dynamically generated based on your documents.</p>
       </div>
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
         {documents.length === 0 ? (
           <p className="text-gray-500">Please upload a document in Your Library first to review flashcards.</p>
         ) : (
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Select a Document</label>
               <select 
                 value={selectedDocId} 
                 onChange={(e) => setSelectedDocId(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium cursor-pointer"
               >
                 {documents.map(doc => (
                   <option key={doc._id} value={doc._id}>{doc.title}</option>
                 ))}
               </select>
             </div>
-            <div className="flex items-end">
+            
+            <div className="w-full sm:w-32">
+               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Count</label>
+               <select 
+                value={flashcardCount} 
+                onChange={(e) => setFlashcardCount(Number(e.target.value))}
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium cursor-pointer"
+              >
+                <option value={10}>10 Cards</option>
+                <option value={20}>20 Cards</option>
+                <option value={30}>30 Cards</option>
+              </select>
+            </div>
+
+            <div className="flex items-end w-full sm:w-auto mt-4 sm:mt-0">
               <button 
                 onClick={generateFlashcards}
                 disabled={generating || loadingCards}
-                className="h-[50px] px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="h-[50px] w-full px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {generating ? <><Loader2 className="animate-spin mr-2" size={18}/> Generating AI Flashcards...</> : <><Zap size={18} className="mr-2" /> Generate New Deck</>}
+                {generating ? <><Loader2 className="animate-spin mr-2" size={18}/> Generating...</> : <><Zap size={18} className="mr-2" /> Generate Fresh Deck</>}
               </button>
             </div>
           </div>
@@ -139,14 +161,14 @@ const Flashcards = () => {
              <p>Loading flashcard deck...</p>
            </div>
         ) : flashcards && flashcards.length > 0 ? (
-           <FlashcardViewer cards={flashcards} />
-        ) : selectedDocId && !generating ? (
+           <FlashcardViewer cards={flashcards} onRestart={fetchCards} />
+        ) : selectedDocId && !generating && flashcards !== null ? (
            <div className="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center shadow-sm border border-gray-100 dark:border-gray-700 mx-auto flex flex-col items-center">
              <div className="bg-indigo-50 dark:bg-indigo-900 p-6 rounded-full text-indigo-400 mb-6">
                <Layers size={48} />
              </div>
              <h3 className="text-2xl font-bold mb-2 dark:text-white">No flashcards found</h3>
-             <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">Click the "Generate New Deck" button above to use AI to automatically extract key concepts from your document.</p>
+             <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">Click the "Generate Fresh Deck" button above to use AI to automatically extract key concepts from your document.</p>
            </div>
         ) : null}
       </div>

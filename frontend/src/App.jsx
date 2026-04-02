@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -9,21 +9,27 @@ import Quizzes from './pages/Quizzes';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Favorites from './pages/Favorites';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
 
 
-
-const Login = () => <div className="p-8"><h1 className="text-3xl font-bold text-gray-800 mb-4">Login</h1><p className="text-gray-600">The login form will go here.</p></div>;
-const Register = () => <div className="p-8"><h1 className="text-3xl font-bold text-gray-800 mb-4">Register</h1><p className="text-gray-600">The registration form will go here.</p></div>;
-
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
-  // For demo purposes, assuming user is always logged in unless explicitly set to null
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+// Guest Route Wrapper – redirects to dashboard if already logged in
+const GuestRoute = ({ children }) => {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 };
@@ -38,8 +44,8 @@ function App() {
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+            <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
             
             {/* Protected Routes inside Layout */}
             <Route 

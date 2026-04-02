@@ -4,53 +4,65 @@ import axios from 'axios';
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
-// Base backend URL
 const API_URL = 'http://localhost:5000/api/auth';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize Auth
+  // On mount, check localStorage for an existing session
   useEffect(() => {
-    const initAuth = async () => {
-      const storedUserInfo = localStorage.getItem('userInfo');
-      if (storedUserInfo) {
+    const storedUserInfo = localStorage.getItem('userInfo');
+    if (storedUserInfo) {
+      try {
         setUser(JSON.parse(storedUserInfo));
-      } else {
-        // Since there is no Login page built yet, we will auto-register/login a Test User
-        try {
-          // Attempt Login First
-          const loginRes = await axios.post(`${API_URL}/login`, {
-            email: 'test@example.com',
-            password: 'password123'
-          });
-          setUser(loginRes.data);
-          localStorage.setItem('userInfo', JSON.stringify(loginRes.data));
-        } catch (error) {
-          // If login fails, register the user
-          try {
-            const regRes = await axios.post(`${API_URL}/register`, {
-              name: 'Alex Johnson',
-              email: 'test@example.com',
-              password: 'password123'
-            });
-            setUser(regRes.data);
-            localStorage.setItem('userInfo', JSON.stringify(regRes.data));
-          } catch (e) {
-            console.error('Failed to auto-authenticate fallback user:', e);
-          }
-        }
+      } catch {
+        localStorage.removeItem('userInfo');
       }
-      setLoading(false);
-    };
-
-    initAuth();
+    }
+    setLoading(false);
   }, []);
 
+  // Login
+  const login = async (email, password) => {
+    try {
+      const { data } = await axios.post(`${API_URL}/login`, { email, password });
+      setUser(data);
+      localStorage.setItem('userInfo', JSON.stringify(data));
+      return { success: true, data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Invalid email or password.',
+      };
+    }
+  };
+
+  // Register
+  const register = async (name, email, password) => {
+    try {
+      const { data } = await axios.post(`${API_URL}/register`, { name, email, password });
+      setUser(data);
+      localStorage.setItem('userInfo', JSON.stringify(data));
+      return { success: true, data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Registration failed.',
+      };
+    }
+  };
+
+  // Logout
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('userInfo');
+  };
+
+  // Update profile
   const updateProfile = async (name, email) => {
-    if (!user || (!name && !email)) return;
-    
+    if (!user || (!name && !email)) return { success: false, error: 'Nothing to update' };
+
     try {
       const config = {
         headers: {
@@ -60,20 +72,30 @@ export const AuthProvider = ({ children }) => {
       };
 
       const { data } = await axios.put(`${API_URL}/profile`, { name, email }, config);
-      
       setUser(data);
       localStorage.setItem('userInfo', JSON.stringify(data));
       return { success: true, data };
     } catch (error) {
-      console.error('Update profile error:', error);
-      return { success: false, error: error.response?.data?.message || error.message };
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message,
+      };
     }
   };
 
-  if (loading) return <div className="p-10 text-center font-semibold text-gray-500">Initializing Auth...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, updateProfile }}>
+    <AuthContext.Provider value={{ user, setUser, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

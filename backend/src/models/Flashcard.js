@@ -11,6 +11,11 @@ const flashcardSchema = new mongoose.Schema({
     required: true,
     ref: 'Document',
   },
+  topic: {
+    type: String,
+    required: true,
+    default: 'General',
+  },
   question: {
     type: String,
     required: true,

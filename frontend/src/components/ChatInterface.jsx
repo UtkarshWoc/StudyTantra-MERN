@@ -92,7 +92,7 @@ const ChatInterface = ({ documentId, documentTitle }) => {
   }
 
   return (
-    <div className="flex flex-col h-[600px] w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden font-sans transition-colors">
+    <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden font-sans transition-colors">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center bg-white dark:bg-gray-800 transition-colors">
          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400 mr-3">

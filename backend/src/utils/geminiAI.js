@@ -33,8 +33,9 @@ export const generateFlashcardsFromText = async (documentText, count = 10) => {
     You are an expert AI study assistant.
     Analyze the following document text and extract ${count} important concepts to create study flashcards.
     Return the output STRICTLY as a raw JSON array of objects without markdown formatting.
-    Each object must have exactly two keys: "question" and "answer".
-    Example: [{"question": "What is X?", "answer": "X is Y."}]
+    Each object must have exactly three keys: "question", "answer", and "topic".
+    The "topic" should be a short, 1-3 word category describing the concept (e.g. "Networking", "History").
+    Example: [{"question": "What is X?", "answer": "X is Y.", "topic": "Networking"}]
     
     Document Text:
     ${(documentText || '').substring(0, 100000)}

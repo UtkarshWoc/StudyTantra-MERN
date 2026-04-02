@@ -4,6 +4,7 @@ import {
   getUserDocuments,
   getDocumentById,
   deleteDocument,
+  toggleFavorite,
 } from '../controllers/documentController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import upload from '../middlewares/uploadMiddleware.js';
@@ -19,5 +20,7 @@ router.route('/')
 router.route('/:id')
   .get(protect, getDocumentById)
   .delete(protect, deleteDocument);
+
+router.put('/:id/favorite', protect, toggleFavorite);
 
 export default router;

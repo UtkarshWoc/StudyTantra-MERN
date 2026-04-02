@@ -10,6 +10,10 @@ const documentSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  isFavorited: {
+    type: Boolean,
+    default: false,
+  },
   filename: {
     type: String,
     required: true,
