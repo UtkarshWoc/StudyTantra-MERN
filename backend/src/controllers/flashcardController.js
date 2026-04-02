@@ -39,14 +39,17 @@ export const generateFlashcards = async (req, res) => {
       return res.status(400).json({ message: 'Could not extract text from this PDF' });
     }
 
+    // Clear previous flashcards for this document to avoid duplicates when regenerating
+    await Flashcard.deleteMany({ document: document._id, user: req.user._id });
+
     // Number of flashcards to generate
-    const count = req.body.count || 10;
+    const count = parseInt(req.body.count, 10) || 10;
 
     // Call Gemini to generate flashcards
     const generatedCards = await generateFlashcardsFromText(textContent, count);
 
     // Filter out invalid ones just in case
-    const validCards = generatedCards.filter((card) => card.question && card.answer);
+    const validCards = generatedCards.filter((card) => card.question && card.answer && card.topic);
 
     // Prepare Flashcard documents for bulk insertion
     const flashcardsToInsert = validCards.map((card) => ({
@@ -54,6 +57,7 @@ export const generateFlashcards = async (req, res) => {
       document: document._id,
       question: card.question,
       answer: card.answer,
+      topic: card.topic || 'General',
     }));
 
     // Bulk insert into the database

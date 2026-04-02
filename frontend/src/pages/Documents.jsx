@@ -44,6 +44,21 @@ const Documents = () => {
     }
   };
 
+  const handleToggleFavorite = async (id, currentStatus) => {
+    try {
+      // Optimistic update
+      setDocuments(documents.map(doc => doc._id === id ? { ...doc, isFavorited: !currentStatus } : doc));
+      
+      await axios.put(`http://localhost:5000/api/documents/${id}/favorite`, {}, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+    } catch (error) {
+      console.error('Failed to toggle favorite', error);
+      // Revert optimistic update on error
+      setDocuments(documents.map(doc => doc._id === id ? { ...doc, isFavorited: currentStatus } : doc));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
@@ -73,10 +88,9 @@ const Documents = () => {
                  title={doc.title} 
                  size="PDF" 
                  date={new Date(doc.createdAt).toLocaleDateString()} 
-                 onDelete={(e) => {
-                   e.stopPropagation();
-                   handleDelete(doc._id);
-                 }} 
+                 isFavorited={doc.isFavorited}
+                 onFavoriteToggle={() => handleToggleFavorite(doc._id, doc.isFavorited)}
+                 onDelete={() => handleDelete(doc._id)} 
                />
             </div>
           ))}

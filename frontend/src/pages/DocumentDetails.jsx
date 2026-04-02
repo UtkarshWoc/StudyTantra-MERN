@@ -32,9 +32,9 @@ const DocumentDetails = () => {
   }, [id, document, user]);
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-8rem)]">
+    <div className="flex gap-4 h-full p-4 lg:p-6 w-full max-h-screen">
       {/* Sidebar / Document Viewer Placeholder */}
-      <div className="w-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex-col hidden lg:flex transition-colors">
+      <div className="w-1/2 lg:w-[55%] xl:w-[60%] bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 lg:p-6 flex-col hidden lg:flex transition-colors relative overflow-hidden">
         <button 
           onClick={() => navigate('/documents')}
           className="flex items-center text-gray-500 hover:text-indigo-600 mb-6 text-sm font-semibold transition-colors cursor-pointer w-fit"
