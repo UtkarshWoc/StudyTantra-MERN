@@ -9,16 +9,16 @@ const QuizEngine = ({ quiz }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false); // Current question submitted
-  
+
   // Array of user answers (the string they selected)
   const [userAnswers, setUserAnswers] = useState([]);
-  
+
   const [score, setScore] = useState(quiz?.score || 0);
   const [showResults, setShowResults] = useState(quiz?.attempted || false);
   const [submittingToServer, setSubmittingToServer] = useState(false);
 
   const quizData = quiz?.questions || [];
-  
+
   // Reset engine when quiz changes
   useEffect(() => {
     setStarted(false);
@@ -48,9 +48,9 @@ const QuizEngine = ({ quiz }) => {
 
   const handleSubmit = () => {
     if (!selectedOption) return;
-    
+
     setIsSubmitted(true);
-    
+
     // Save their answer
     const newAnswers = [...userAnswers];
     newAnswers[currentQuestion] = selectedOption;
@@ -71,8 +71,8 @@ const QuizEngine = ({ quiz }) => {
       // Quiz finished, submit to backend
       setSubmittingToServer(true);
       try {
-        await axios.post(`${process.env.REACT_APP_API_URL}/api/quizzes/${quiz._id}/submit`, 
-          { answers: userAnswers }, 
+        await axios.post(`${process.env.REACT_APP_API_URL}/api/quizzes/${quiz._id}/submit`,
+          { answers: userAnswers },
           { headers: { Authorization: `Bearer ${user.token}` } }
         );
       } catch (err) {
@@ -97,7 +97,7 @@ const QuizEngine = ({ quiz }) => {
           <div className="flex flex-col"><span className="text-indigo-600 dark:text-indigo-400 font-bold text-lg mb-1">{quizData.length}</span> Questions</div>
           <div className="flex flex-col"><span className="text-indigo-600 dark:text-indigo-400 font-bold text-lg mb-1">~{Math.ceil(quizData.length * 0.5)}</span> Minutes</div>
         </div>
-        <button 
+        <button
           onClick={() => setStarted(true)}
           className="bg-indigo-600 text-white font-bold py-3.5 px-8 rounded-xl shadow-md hover:bg-indigo-700 hover:shadow-lg transition-all w-full md:w-2/3 cursor-pointer"
         >
@@ -111,7 +111,7 @@ const QuizEngine = ({ quiz }) => {
   if (showResults) {
     const total = quiz?.totalQuestions || quizData.length;
     const percentage = Math.round((score / total) * 100);
-    
+
     return (
       <div className="space-y-8 animate-in fade-in zoom-in duration-300 transition-colors">
         {/* Results Header */}
@@ -119,11 +119,11 @@ const QuizEngine = ({ quiz }) => {
           <div className="relative inline-block mb-6">
             <svg className="w-32 h-32 transform -rotate-90">
               <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100 dark:text-gray-700" />
-              <circle 
-                cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" 
-                strokeDasharray="377" 
-                strokeDashoffset={377 - (377 * percentage) / 100} 
-                className={`transition-all duration-1000 ease-out ${percentage >= 70 ? 'text-emerald-500 dark:text-emerald-400' : 'text-yellow-500 dark:text-yellow-400'}`} 
+              <circle
+                cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent"
+                strokeDasharray="377"
+                strokeDashoffset={377 - (377 * percentage) / 100}
+                className={`transition-all duration-1000 ease-out ${percentage >= 70 ? 'text-emerald-500 dark:text-emerald-400' : 'text-yellow-500 dark:text-yellow-400'}`}
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
@@ -139,7 +139,7 @@ const QuizEngine = ({ quiz }) => {
         {/* Answer Review List */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-10 max-w-4xl mx-auto">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Quiz Review</h3>
-          
+
           <div className="space-y-8">
             {quizData.map((q, idx) => {
               const userAnswer = userAnswers[idx];
@@ -151,28 +151,28 @@ const QuizEngine = ({ quiz }) => {
               return (
                 <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                   <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">{idx + 1}. {q.question}</h4>
-                  
+
                   <div className="space-y-2 mb-4 text-sm font-medium">
                     {q.options.map((opt, optIdx) => {
-                       const isCorrectOpt = opt === q.correctAnswer;
-                       const isUserPicked = userAnswer === opt;
-                       
-                       let classes = "p-3 rounded-lg border ";
-                       if (isCorrectOpt) {
-                         classes += "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 text-emerald-800 dark:text-emerald-200";
-                       } else if (hasUserAnswers && isUserPicked) {
-                         classes += "bg-red-50 dark:bg-red-900/30 border-red-500 text-red-800 dark:text-red-200";
-                       } else {
-                         classes += "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400";
-                       }
+                      const isCorrectOpt = opt === q.correctAnswer;
+                      const isUserPicked = userAnswer === opt;
 
-                       return (
-                         <div key={optIdx} className={`flex items-center justify-between ${classes}`}>
-                           <span>{opt}</span>
-                           {isCorrectOpt && <CheckCircle2 size={18} className="text-emerald-500 dark:text-emerald-400" />}
-                           {hasUserAnswers && isUserPicked && !isCorrectOpt && <XCircle size={18} className="text-red-500 dark:text-red-400" />}
-                         </div>
-                       );
+                      let classes = "p-3 rounded-lg border ";
+                      if (isCorrectOpt) {
+                        classes += "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 text-emerald-800 dark:text-emerald-200";
+                      } else if (hasUserAnswers && isUserPicked) {
+                        classes += "bg-red-50 dark:bg-red-900/30 border-red-500 text-red-800 dark:text-red-200";
+                      } else {
+                        classes += "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400";
+                      }
+
+                      return (
+                        <div key={optIdx} className={`flex items-center justify-between ${classes}`}>
+                          <span>{opt}</span>
+                          {isCorrectOpt && <CheckCircle2 size={18} className="text-emerald-500 dark:text-emerald-400" />}
+                          {hasUserAnswers && isUserPicked && !isCorrectOpt && <XCircle size={18} className="text-red-500 dark:text-red-400" />}
+                        </div>
+                      );
                     })}
                   </div>
 
@@ -201,8 +201,8 @@ const QuizEngine = ({ quiz }) => {
           <span className="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 font-bold px-3 py-1 rounded-md transition-colors">Score: {score}</span>
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 shadow-inner transition-colors">
-          <div 
-            className="bg-indigo-600 h-2 rounded-full transition-all duration-500 ease-out" 
+          <div
+            className="bg-indigo-600 h-2 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${((currentQuestion) / quizData.length) * 100}%` }}
           ></div>
         </div>
@@ -219,26 +219,26 @@ const QuizEngine = ({ quiz }) => {
           {currentQ.options.map((option, idx) => {
             const isSelected = selectedOption === option;
             const isCorrect = option === currentQ.correctAnswer;
-            
+
             let btnClasses = "w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center cursor-pointer ";
-            
+
             if (!isSubmitted) {
               btnClasses += isSelected ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/30 text-indigo-900 dark:text-indigo-100 shadow-sm" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-white dark:hover:bg-gray-800 bg-white dark:bg-gray-800";
             } else {
               if (isCorrect) {
-                 // The option is correct
-                 btnClasses += "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-100 shadow-sm";
+                // The option is correct
+                btnClasses += "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-100 shadow-sm";
               } else if (isSelected && !isCorrect) {
-                 // User picked it, but it's wrong
-                 btnClasses += "border-red-500 bg-red-50 dark:bg-red-900/30 text-red-900 dark:text-red-100 shadow-sm";
+                // User picked it, but it's wrong
+                btnClasses += "border-red-500 bg-red-50 dark:bg-red-900/30 text-red-900 dark:text-red-100 shadow-sm";
               } else {
-                 // Unselected wrong option
-                 btnClasses += "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 opacity-60";
+                // Unselected wrong option
+                btnClasses += "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 opacity-60";
               }
             }
 
             return (
-              <button 
+              <button
                 key={idx}
                 onClick={() => handleOptionSelect(option)}
                 disabled={isSubmitted}
@@ -263,7 +263,7 @@ const QuizEngine = ({ quiz }) => {
                 {currentQ.explanation}
               </p>
             </div>
-            <button 
+            <button
               onClick={handleNext}
               disabled={submittingToServer}
               className="w-full md:w-auto bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold py-3 px-6 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-100 hover:shadow-lg transition-all flex items-center justify-center whitespace-nowrap cursor-pointer shadow-md disabled:opacity-50"
@@ -276,7 +276,7 @@ const QuizEngine = ({ quiz }) => {
 
         {!isSubmitted && (
           <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-end">
-            <button 
+            <button
               onClick={handleSubmit}
               disabled={selectedOption === null}
               className="w-full md:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-indigo-700 hover:shadow-lg transition-all shadow-md disabled:opacity-50 disabled:hover:shadow-md disabled:cursor-not-allowed cursor-pointer"

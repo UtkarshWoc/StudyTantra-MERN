@@ -45,15 +45,15 @@ const Flashcards = () => {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (data && data.length > 0) {
-         const mappedCards = data.map(card => ({
-           id: card._id,
-           front: card.question,
-           back: card.answer,
-           topic: card.topic || 'General'
-         }));
-         setFlashcards(mappedCards);
+        const mappedCards = data.map(card => ({
+          id: card._id,
+          front: card.question,
+          back: card.answer,
+          topic: card.topic || 'General'
+        }));
+        setFlashcards(mappedCards);
       } else {
-         setFlashcards([]);
+        setFlashcards([]);
       }
     } catch (err) {
       console.error('Error fetching cards', err);
@@ -71,11 +71,11 @@ const Flashcards = () => {
     setGenerating(true);
     setError('');
     try {
-      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/flashcards/generate/${selectedDocId}`, 
-        { count: flashcardCount }, 
+      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/flashcards/generate/${selectedDocId}`,
+        { count: flashcardCount },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
-      
+
       const mappedCards = data.flashcards.map(card => ({
         id: card._id,
         front: card.question,
@@ -116,8 +116,8 @@ const Flashcards = () => {
           <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Select a Document</label>
-              <select 
-                value={selectedDocId} 
+              <select
+                value={selectedDocId}
                 onChange={(e) => setSelectedDocId(e.target.value)}
                 className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium cursor-pointer"
               >
@@ -126,11 +126,11 @@ const Flashcards = () => {
                 ))}
               </select>
             </div>
-            
+
             <div className="w-full sm:w-32">
-               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Count</label>
-               <select 
-                value={flashcardCount} 
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Count</label>
+              <select
+                value={flashcardCount}
                 onChange={(e) => setFlashcardCount(Number(e.target.value))}
                 className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium cursor-pointer"
               >
@@ -141,12 +141,12 @@ const Flashcards = () => {
             </div>
 
             <div className="flex items-end w-full sm:w-auto mt-4 sm:mt-0">
-              <button 
+              <button
                 onClick={generateFlashcards}
                 disabled={generating || loadingCards}
                 className="h-[50px] w-full px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {generating ? <><Loader2 className="animate-spin mr-2" size={18}/> Generating...</> : <><Zap size={18} className="mr-2" /> Generate Fresh Deck</>}
+                {generating ? <><Loader2 className="animate-spin mr-2" size={18} /> Generating...</> : <><Zap size={18} className="mr-2" /> Generate Fresh Deck</>}
               </button>
             </div>
           </div>
@@ -156,20 +156,20 @@ const Flashcards = () => {
 
       <div className="min-h-[400px]">
         {loadingCards ? (
-           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-             <Loader2 className="animate-spin mb-3" size={32} />
-             <p>Loading flashcard deck...</p>
-           </div>
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+            <Loader2 className="animate-spin mb-3" size={32} />
+            <p>Loading flashcard deck...</p>
+          </div>
         ) : flashcards && flashcards.length > 0 ? (
-           <FlashcardViewer cards={flashcards} onRestart={fetchCards} />
+          <FlashcardViewer cards={flashcards} onRestart={fetchCards} />
         ) : selectedDocId && !generating && flashcards !== null ? (
-           <div className="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center shadow-sm border border-gray-100 dark:border-gray-700 mx-auto flex flex-col items-center">
-             <div className="bg-indigo-50 dark:bg-indigo-900 p-6 rounded-full text-indigo-400 mb-6">
-               <Layers size={48} />
-             </div>
-             <h3 className="text-2xl font-bold mb-2 dark:text-white">No flashcards found</h3>
-             <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">Click the "Generate Fresh Deck" button above to use AI to automatically extract key concepts from your document.</p>
-           </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center shadow-sm border border-gray-100 dark:border-gray-700 mx-auto flex flex-col items-center">
+            <div className="bg-indigo-50 dark:bg-indigo-900 p-6 rounded-full text-indigo-400 mb-6">
+              <Layers size={48} />
+            </div>
+            <h3 className="text-2xl font-bold mb-2 dark:text-white">No flashcards found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">Click the "Generate Fresh Deck" button above to use AI to automatically extract key concepts from your document.</p>
+          </div>
         ) : null}
       </div>
     </div>

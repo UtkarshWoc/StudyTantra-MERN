@@ -3,15 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  
-  // Wire the PORT defined in .env exactly to where the frontend code expects the API URL
-  const port = env.PORT || 5000;
+  const env = loadEnv(mode, process.cwd(), '')
+
+  // Safely fallback to localhost:5000 if the .env file is not picked up, completely fixing "undefined" port errors 
+  const baseURL = env.REACT_APP_API_URL || 'http://localhost:5000';
 
   return {
     define: {
-      // Expose the API URL reliably to the browser as process.env.REACT_APP_API_URL
-      'process.env.REACT_APP_API_URL': JSON.stringify(`http://localhost:${port}`)
+      'process.env.REACT_APP_API_URL': JSON.stringify(baseURL)
     },
     plugins: [
       tailwindcss(),

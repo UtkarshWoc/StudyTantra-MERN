@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Heart, 
-  Search, 
+import {
+  Heart,
+  Search,
   FileText,
   Star,
   Loader2
@@ -41,7 +41,7 @@ const Favorites = () => {
     try {
       // Optimistic update - just remove it from the favorites list since we are on the Favorites page
       setDocuments(documents.filter(doc => doc._id !== id));
-      
+
       await axios.put(`${process.env.REACT_APP_API_URL}/api/documents/${id}/favorite`, {}, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
@@ -53,7 +53,7 @@ const Favorites = () => {
   };
 
   const handleDelete = async (id) => {
-    if(!window.confirm("Are you sure you want to delete this document?")) return;
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
     try {
       await axios.delete(`${process.env.REACT_APP_API_URL}/api/documents/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` }
@@ -80,7 +80,7 @@ const Favorites = () => {
             </h1>
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Your saved study materials for quick access.</p>
           </div>
-          
+
           <div className="relative w-full md:w-72">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={16} className="text-gray-400 dark:text-gray-500" />
@@ -105,14 +105,14 @@ const Favorites = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full animate-in fade-in duration-500">
             {filteredItems.map(doc => (
               <div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1">
-                 <DocumentCard 
-                   title={doc.title} 
-                   size="PDF" 
-                   date={new Date(doc.createdAt).toLocaleDateString()} 
-                   isFavorited={doc.isFavorited}
-                   onFavoriteToggle={() => handleToggleFavorite(doc._id, doc.isFavorited)}
-                   onDelete={() => handleDelete(doc._id)} 
-                 />
+                <DocumentCard
+                  title={doc.title}
+                  size="PDF"
+                  date={new Date(doc.createdAt).toLocaleDateString()}
+                  isFavorited={doc.isFavorited}
+                  onFavoriteToggle={() => handleToggleFavorite(doc._id, doc.isFavorited)}
+                  onDelete={() => handleDelete(doc._id)}
+                />
               </div>
             ))}
           </div>
@@ -123,12 +123,12 @@ const Favorites = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">No favorites found</h3>
             <p className="text-gray-500 dark:text-gray-400 text-center max-w-sm">
-              {searchQuery 
-                ? `We couldn't find any favorites matching "${searchQuery}".` 
+              {searchQuery
+                ? `We couldn't find any favorites matching "${searchQuery}".`
                 : "You haven't saved any items to your favorites yet. Go to your Library and click the star icon to save documents here!"}
             </p>
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => setSearchQuery('')}
                 className="cursor-pointer mt-6 px-5 py-2 bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-100 dark:hover:bg-amber-800/50 transition-colors"
               >
