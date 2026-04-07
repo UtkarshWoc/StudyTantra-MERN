@@ -17,7 +17,7 @@ const Documents = () => {
     if (!user) return;
     try {
       setLoading(true);
-      const { data } = await axios.get('http://localhost:5000/api/documents', {
+      const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/documents`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setDocuments(data);
@@ -35,7 +35,7 @@ const Documents = () => {
   const handleDelete = async (id) => {
     if(!window.confirm("Are you sure you want to delete this document?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/documents/${id}`, {
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/documents/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setDocuments(documents.filter(doc => doc._id !== id));
@@ -49,7 +49,7 @@ const Documents = () => {
       // Optimistic update
       setDocuments(documents.map(doc => doc._id === id ? { ...doc, isFavorited: !currentStatus } : doc));
       
-      await axios.put(`http://localhost:5000/api/documents/${id}/favorite`, {}, {
+      await axios.put(`${process.env.REACT_APP_API_URL}/api/documents/${id}/favorite`, {}, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
     } catch (error) {

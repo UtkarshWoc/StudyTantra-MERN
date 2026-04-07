@@ -24,7 +24,7 @@ const ChatInterface = ({ documentId, documentTitle }) => {
     
     const fetchHistory = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/chat/${documentId}`, {
+        const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/chat/${documentId}`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         
@@ -63,7 +63,7 @@ const ChatInterface = ({ documentId, documentTitle }) => {
     setIsTyping(true);
 
     try {
-      const { data } = await axios.post(`http://localhost:5000/api/chat/${documentId}`, 
+      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat/${documentId}`, 
         { message: userText },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

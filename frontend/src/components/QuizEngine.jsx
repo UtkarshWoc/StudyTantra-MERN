@@ -71,7 +71,7 @@ const QuizEngine = ({ quiz }) => {
       // Quiz finished, submit to backend
       setSubmittingToServer(true);
       try {
-        await axios.post(`http://localhost:5000/api/quizzes/${quiz._id}/submit`, 
+        await axios.post(`${process.env.REACT_APP_API_URL}/api/quizzes/${quiz._id}/submit`, 
           { answers: userAnswers }, 
           { headers: { Authorization: `Bearer ${user.token}` } }
         );

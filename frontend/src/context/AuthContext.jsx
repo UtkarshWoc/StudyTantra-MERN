@@ -4,7 +4,7 @@ import axios from 'axios';
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = `${process.env.REACT_APP_API_URL}/api/auth`;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
