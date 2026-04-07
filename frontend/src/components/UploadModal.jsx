@@ -46,7 +46,7 @@ const UploadModal = ({ isOpen, onClose }) => {
           },
         };
 
-        const { data } = await axios.post('http://localhost:5000/api/documents', formData, config);
+        const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/documents`, formData, config);
         
         setIsUploading(false);
         setUploadSuccess(true);

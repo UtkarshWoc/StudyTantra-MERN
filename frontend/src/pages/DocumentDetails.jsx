@@ -19,7 +19,7 @@ const DocumentDetails = () => {
       const fetchDoc = async () => {
         try {
           const config = { headers: { Authorization: `Bearer ${user.token}` } };
-          const { data } = await axios.get(`http://localhost:5000/api/documents/${id}`, config);
+          const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/documents/${id}`, config);
           setDocument(data);
         } catch (error) {
           console.error("Error fetching doc:", error);
@@ -51,7 +51,7 @@ const DocumentDetails = () => {
              </div>
           ) : document ? (
              <embed 
-               src={`http://localhost:5000/${document.filePath.replace(/\\/g, '/')}`} 
+               src={`${process.env.REACT_APP_API_URL}/${document.filePath.replace(/\\/g, '/')}`} 
                type="application/pdf" 
                className="w-full h-full absolute inset-0 rounded-xl" 
                title={document.title}

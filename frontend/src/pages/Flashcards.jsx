@@ -20,7 +20,7 @@ const Flashcards = () => {
     const fetchDocs = async () => {
       if (!user) return;
       try {
-        const { data } = await axios.get('http://localhost:5000/api/documents', {
+        const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/documents`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setDocuments(data);
@@ -41,7 +41,7 @@ const Flashcards = () => {
     setError('');
     setFlashcards(null);
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/flashcards/${selectedDocId}`, {
+      const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/flashcards/${selectedDocId}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (data && data.length > 0) {
@@ -71,7 +71,7 @@ const Flashcards = () => {
     setGenerating(true);
     setError('');
     try {
-      const { data } = await axios.post(`http://localhost:5000/api/flashcards/generate/${selectedDocId}`, 
+      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/flashcards/generate/${selectedDocId}`, 
         { count: flashcardCount }, 
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

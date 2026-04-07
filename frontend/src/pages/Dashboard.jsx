@@ -17,7 +17,7 @@ const Dashboard = () => {
     const fetchDashboard = async () => {
       if (!user) return;
       try {
-        const { data } = await axios.get('http://localhost:5000/api/dashboard', {
+        const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/dashboard`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         if (data.metrics) setStats(data);

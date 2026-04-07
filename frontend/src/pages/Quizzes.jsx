@@ -20,7 +20,7 @@ const Quizzes = () => {
     const fetchDocs = async () => {
       if (!user) return;
       try {
-        const { data } = await axios.get('http://localhost:5000/api/documents', {
+        const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/documents`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setDocuments(data);
@@ -42,7 +42,7 @@ const Quizzes = () => {
       setError('');
       setActiveQuiz(null);
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/quizzes/document/${selectedDocId}`, {
+        const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/quizzes/document/${selectedDocId}`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         if (data.length > 0) {
@@ -62,7 +62,7 @@ const Quizzes = () => {
     setGenerating(true);
     setError('');
     try {
-      const { data } = await axios.post(`http://localhost:5000/api/quizzes/generate/${selectedDocId}`, 
+      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/quizzes/generate/${selectedDocId}`, 
         { count: quizCount }, 
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
