@@ -33,7 +33,7 @@ const UploadModal = ({ isOpen, onClose }) => {
     if (file && user) {
       setIsUploading(true);
       setErrorMsg("");
-      
+
       const formData = new FormData();
       formData.append('document', file);
       formData.append('title', file.name.split('.')[0]);
@@ -47,13 +47,13 @@ const UploadModal = ({ isOpen, onClose }) => {
         };
 
         const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/documents`, formData, config);
-        
+
         setIsUploading(false);
         setUploadSuccess(true);
         setTimeout(() => {
           setUploadSuccess(false);
           onClose();
-          navigate(`/documents/${data._id}`, { state: { document: data }});
+          navigate(`/documents/${data._id}`, { state: { document: data } });
         }, 1500);
 
       } catch (error) {
@@ -73,7 +73,7 @@ const UploadModal = ({ isOpen, onClose }) => {
             <X size={20} />
           </button>
         </div>
-        
+
         <div className="p-6">
           {uploadSuccess ? (
             <div className="flex flex-col items-center justify-center py-10 fade-in animate-in">
@@ -88,9 +88,8 @@ const UploadModal = ({ isOpen, onClose }) => {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center transition-colors ${
-                isDragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              }`}
+              className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center transition-colors ${isDragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                }`}
             >
               {isUploading ? (
                 <div className="flex flex-col items-center justify-center py-4">
@@ -106,12 +105,12 @@ const UploadModal = ({ isOpen, onClose }) => {
                   <h4 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Click to upload or drag and drop</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400">PDF ONLY (max. 10MB)</p>
                   {errorMsg && <p className="text-xs text-red-500 font-bold mt-2">{errorMsg}</p>}
-                  
+
                   <label className="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors cursor-pointer">
                     Browse Files
-                    <input 
-                      type="file" 
-                      className="hidden" 
+                    <input
+                      type="file"
+                      className="hidden"
                       accept=".pdf,.doc,.docx,.txt"
                       onChange={(e) => handleFileSelection(e.target.files[0])}
                     />

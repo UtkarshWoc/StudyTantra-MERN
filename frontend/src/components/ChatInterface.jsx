@@ -21,13 +21,13 @@ const ChatInterface = ({ documentId, documentTitle }) => {
 
   useEffect(() => {
     if (!documentId || !user) return;
-    
+
     const fetchHistory = async () => {
       try {
         const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/chat/${documentId}`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
-        
+
         if (data.history && data.history.length > 0) {
           const formattedHistory = data.history.map((msg, i) => ({
             id: i,
@@ -48,7 +48,7 @@ const ChatInterface = ({ documentId, documentTitle }) => {
         setLoadingHistory(false);
       }
     };
-    
+
     fetchHistory();
   }, [documentId, user, documentTitle]);
 
@@ -63,20 +63,20 @@ const ChatInterface = ({ documentId, documentTitle }) => {
     setIsTyping(true);
 
     try {
-      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat/${documentId}`, 
+      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat/${documentId}`,
         { message: userText },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
-      
+
       setIsTyping(false);
       setMessages(prev => [
-        ...prev, 
+        ...prev,
         { id: Date.now() + 1, sender: 'ai', text: data.reply }
       ]);
     } catch (error) {
       setIsTyping(false);
       setMessages(prev => [
-        ...prev, 
+        ...prev,
         { id: Date.now() + 1, sender: 'ai', text: 'Error: Could not connect to the AI service. Please try again.' }
       ]);
     }
@@ -95,13 +95,13 @@ const ChatInterface = ({ documentId, documentTitle }) => {
     <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden font-sans transition-colors">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center bg-white dark:bg-gray-800 transition-colors">
-         <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400 mr-3">
-           <Sparkles size={20} />
-         </div>
-         <div>
-           <h3 className="font-bold text-gray-900 dark:text-white text-sm">AI Study Assistant</h3>
-           <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Document Context Active</p>
-         </div>
+        <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400 mr-3">
+          <Sparkles size={20} />
+        </div>
+        <div>
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm">AI Study Assistant</h3>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Document Context Active</p>
+        </div>
       </div>
 
       {/* Message List */}
@@ -116,10 +116,10 @@ const ChatInterface = ({ documentId, documentTitle }) => {
             </div>
           </div>
         ))}
-        
+
         {isTyping && (
           <div className="flex max-w-[85%] animate-in fade-in duration-300">
-             <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm">
+            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm">
               <Bot size={16} className="text-white" />
             </div>
             <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex items-center justify-center h-12 w-16 transition-colors">
@@ -144,8 +144,8 @@ const ChatInterface = ({ documentId, documentTitle }) => {
             placeholder="Ask a question about your documents..."
             className="w-full pl-4 pr-12 py-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-gray-400 text-gray-900 dark:text-gray-100 shadow-inner"
           />
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={!input.trim() || isTyping}
             className="absolute right-2 p-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm cursor-pointer"
           >
