@@ -1,10 +1,6 @@
-import fs from 'fs';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
 import Document from '../models/Document.js';
 import Quiz from '../models/Quiz.js';
-import { generateQuizFromText } from '../utils/geminiAI.js';
+import { generateQuizFromUrl } from '../utils/geminiAI.js';
 
 // @desc    Generate a quiz from a document
 // @route   POST /api/quizzes/generate/:docId
@@ -17,22 +13,14 @@ export const generateQuiz = async (req, res) => {
       return res.status(404).json({ message: 'Document not found or unauthorized' });
     }
 
-    if (!fs.existsSync(document.filePath)) {
-      return res.status(404).json({ message: 'Document file missing' });
-    }
-
-    const dataBuffer = fs.readFileSync(document.filePath);
-    let textContent = '';
-    try {
-      const pdfData = await pdfParse(dataBuffer);
-      textContent = pdfData.text;
-    } catch (parseError) {
-      console.warn("PDF Parse Error in Quiz:", parseError.message);
-      return res.status(400).json({ message: 'Error: The PDF parser could not read text from this document. It might be corrupted, image-only, or encrypted.' });
+    if (!document.filePath) {
+      return res.status(404).json({ message: 'Document file URL missing' });
     }
 
     const count = req.body.count || 5;
-    const questions = await generateQuizFromText(textContent, count);
+
+    // Send the Cloudinary URL directly to Gemini for processing
+    const questions = await generateQuizFromUrl(document.filePath, count);
 
     // Save quiz to db
     const quiz = await Quiz.create({

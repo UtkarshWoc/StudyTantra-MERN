@@ -1,10 +1,6 @@
-import fs from 'fs';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
 import Document from '../models/Document.js';
 import Flashcard from '../models/Flashcard.js';
-import { generateFlashcardsFromText } from '../utils/geminiAI.js';
+import { generateFlashcardsFromUrl } from '../utils/geminiAI.js';
 
 // @desc    Generate flashcards from document using AI
 // @route   POST /api/flashcards/generate/:docId
@@ -21,22 +17,8 @@ export const generateFlashcards = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized for this document' });
     }
 
-    if (!fs.existsSync(document.filePath)) {
-      return res.status(404).json({ message: 'Document file missing on server' });
-    }
-
-    const dataBuffer = fs.readFileSync(document.filePath);
-    let textContent = '';
-    try {
-      const pdfData = await pdfParse(dataBuffer);
-      textContent = pdfData.text;
-    } catch (parseError) {
-      console.warn("PDF Parse Error in Flashcards:", parseError.message);
-      return res.status(400).json({ message: 'Error: The PDF parser could not read text from this document.' });
-    }
-
-    if (!textContent || textContent.trim().length === 0) {
-      return res.status(400).json({ message: 'Could not extract text from this PDF' });
+    if (!document.filePath) {
+      return res.status(404).json({ message: 'Document file URL missing' });
     }
 
     // Clear previous flashcards for this document to avoid duplicates when regenerating
@@ -45,8 +27,8 @@ export const generateFlashcards = async (req, res) => {
     // Number of flashcards to generate
     const count = parseInt(req.body.count, 10) || 10;
 
-    // Call Gemini to generate flashcards
-    const generatedCards = await generateFlashcardsFromText(textContent, count);
+    // Send the Cloudinary URL directly to Gemini for processing
+    const generatedCards = await generateFlashcardsFromUrl(document.filePath, count);
 
     // Filter out invalid ones just in case
     const validCards = generatedCards.filter((card) => card.question && card.answer && card.topic);

@@ -34,7 +34,7 @@ app.use("/api/flashcards", flashcardRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-app.use('/uploads', express.static(path.join(path.resolve(), 'uploads')));
+// Files are served from Cloudinary — no local static file serving needed
 
 // Error Handling Middleware
 app.use(notFound);

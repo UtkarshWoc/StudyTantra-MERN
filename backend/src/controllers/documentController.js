@@ -1,9 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import Document from '../models/Document.js';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+import cloudinary from '../config/cloudinary.js';
 
 // @desc    Upload new document
 // @route   POST /api/documents/upload
@@ -16,29 +12,21 @@ export const uploadDocument = async (req, res) => {
 
     const file = req.file;
 
-    // Read the PDF to get page count (optional, but requested in model)
-    let pageCount = 0;
-    try {
-      const dataBuffer = fs.readFileSync(file.path);
-      const pdfData = await pdfParse(dataBuffer);
-      pageCount = pdfData.numpages || 0;
-    } catch (parseError) {
-      console.warn('PDF Parse Warning (Skipping page count):', parseError.message);
-    }
-
+    // multer-storage-cloudinary puts the Cloudinary URL in file.path
+    // and the public_id in file.filename
     const document = await Document.create({
       user: req.user._id,
       title: req.body.title || file.originalname,
-      filename: file.filename,
-      filePath: file.path,
-      sizeBytes: file.size,
-      pageCount: pageCount,
+      filename: file.originalname || file.filename,
+      filePath: file.path,                  // Cloudinary secure URL
+      cloudinaryPublicId: file.filename,     // Cloudinary public_id for deletion
+      sizeBytes: file.size || 0,
+      pageCount: 0,                          // We no longer parse locally; page count can be set later
     });
 
     res.status(201).json(document);
   } catch (error) {
     console.error('Error in uploadDocument:', error);
-    try { fs.writeFileSync('upload_error.log', error.stack || error.message); } catch(e){}
     res.status(500).json({ message: 'Server error during file upload', error: error.message });
   }
 };
@@ -49,25 +37,8 @@ export const uploadDocument = async (req, res) => {
 export const getUserDocuments = async (req, res) => {
   try {
     const documents = await Document.find({ user: req.user._id }).sort({ createdAt: -1 });
-    
-    // Check if files actually exist on disk, filter and cleanup if corrupted
-    const validDocuments = [];
-    for (const doc of documents) {
-      try {
-        if (doc.filePath && fs.existsSync(doc.filePath)) {
-          validDocuments.push(doc);
-        } else {
-          // Orphaned record found, clean it up from DB
-          console.warn(`Cleaning up orphaned document record (File missing or no path): ${doc.title}`);
-          await Document.deleteOne({ _id: doc._id });
-        }
-      } catch (checkErr) {
-        console.error(`Error checking file for doc ${doc._id}:`, checkErr);
-        validDocuments.push(doc); // push anyway to avoid breaking the whole list
-      }
-    }
-
-    res.json(validDocuments);
+    // With Cloudinary, files are always available via URL — no local file checks needed
+    res.json(documents);
   } catch (error) {
     console.error('Error in getUserDocuments:', error);
     res.status(500).json({ message: 'Server error retrieving documents', error: error.message });
@@ -100,9 +71,14 @@ export const deleteDocument = async (req, res) => {
     const document = await Document.findById(req.params.id);
 
     if (document && document.user.toString() === req.user._id.toString()) {
-      // Delete the file from the uploads directory
-      if (fs.existsSync(document.filePath)) {
-        fs.unlinkSync(document.filePath);
+      // Delete the file from Cloudinary
+      if (document.cloudinaryPublicId) {
+        try {
+          await cloudinary.uploader.destroy(document.cloudinaryPublicId, { resource_type: 'raw' });
+        } catch (cloudErr) {
+          console.warn('Cloudinary deletion warning:', cloudErr.message);
+          // Continue deleting the DB record even if Cloudinary fails
+        }
       }
 
       await document.deleteOne();
