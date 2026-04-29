@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ChatInterface from '../components/ChatInterface';
-import { ArrowLeft, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, ExternalLink } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -31,17 +31,35 @@ const DocumentDetails = () => {
     }
   }, [id, document, user]);
 
+  // Build Google Docs Viewer URL for cross-origin PDF rendering
+  const getViewerUrl = (pdfUrl) => {
+    return `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+  };
+
   return (
     <div className="flex gap-4 h-full p-4 lg:p-6 w-full max-h-screen">
-      {/* Sidebar / Document Viewer Placeholder */}
+      {/* Sidebar / Document Viewer */}
       <div className="w-1/2 lg:w-[55%] xl:w-[60%] bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 lg:p-6 flex-col hidden lg:flex transition-colors relative overflow-hidden">
-        <button
-          onClick={() => navigate('/documents')}
-          className="flex items-center text-gray-500 hover:text-indigo-600 mb-6 text-sm font-semibold transition-colors cursor-pointer w-fit"
-        >
-          <ArrowLeft size={16} className="mr-1" />
-          Back to Library
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigate('/documents')}
+            className="flex items-center text-gray-500 hover:text-indigo-600 text-sm font-semibold transition-colors cursor-pointer w-fit"
+          >
+            <ArrowLeft size={16} className="mr-1" />
+            Back to Library
+          </button>
+          {document?.filePath && (
+            <a
+              href={document.filePath}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors gap-1"
+            >
+              <ExternalLink size={14} />
+              Open PDF
+            </a>
+          )}
+        </div>
 
         <div className="flex-1 bg-gray-50 dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center overflow-hidden relative transition-colors">
           {loading ? (
@@ -49,12 +67,12 @@ const DocumentDetails = () => {
               <Loader2 className="animate-spin mb-2" size={32} />
               <p>Loading document...</p>
             </div>
-          ) : document ? (
-            <embed
-              src={`${process.env.REACT_APP_API_URL}/${document.filePath.replace(/\\/g, '/')}`}
-              type="application/pdf"
-              className="w-full h-full absolute inset-0 rounded-xl"
+          ) : document?.filePath ? (
+            <iframe
+              src={getViewerUrl(document.filePath)}
+              className="w-full h-full absolute inset-0 rounded-xl border-0"
               title={document.title}
+              allow="autoplay"
             />
           ) : (
             <div className="text-gray-400 text-center">

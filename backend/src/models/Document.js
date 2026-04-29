@@ -20,7 +20,10 @@ const documentSchema = new mongoose.Schema({
   },
   filePath: {
     type: String,
-    required: true,
+    required: true, // Cloudinary secure URL
+  },
+  cloudinaryPublicId: {
+    type: String,    // Cloudinary public_id for deletion
   },
   pageCount: {
     type: Number,

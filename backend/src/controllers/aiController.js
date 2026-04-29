@@ -1,9 +1,5 @@
-import fs from 'fs';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
 import Document from '../models/Document.js';
-import { generateDocumentSummary } from '../utils/geminiAI.js';
+import { generateDocumentSummaryFromUrl } from '../utils/geminiAI.js';
 
 // @desc    Generate summary for a document
 // @route   POST /api/ai/summary/:docId
@@ -20,21 +16,12 @@ export const createSummary = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized for this document' });
     }
 
-    // Read and parse PDF
-    if (!fs.existsSync(document.filePath)) {
-      return res.status(404).json({ message: 'Document file missing on server' });
+    if (!document.filePath) {
+      return res.status(404).json({ message: 'Document file URL missing' });
     }
 
-    const dataBuffer = fs.readFileSync(document.filePath);
-    const pdfData = await pdfParse(dataBuffer);
-    const textContent = pdfData.text;
-
-    if (!textContent || textContent.trim().length === 0) {
-      return res.status(400).json({ message: 'Could not extract text from this PDF' });
-    }
-
-    // Call Gemini to generate summary
-    const summary = await generateDocumentSummary(textContent);
+    // Send the Cloudinary URL directly to Gemini for processing
+    const summary = await generateDocumentSummaryFromUrl(document.filePath);
 
     // Save summary in database
     document.summary = summary;

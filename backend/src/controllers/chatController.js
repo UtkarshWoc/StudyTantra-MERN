@@ -1,10 +1,6 @@
-import fs from 'fs';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
 import Document from '../models/Document.js';
 import ChatHistory from '../models/ChatHistory.js';
-import { chatWithDocument } from '../utils/geminiAI.js';
+import { chatWithDocumentUrl } from '../utils/geminiAI.js';
 
 // @desc    Send a message in the document chat
 // @route   POST /api/chat/:docId
@@ -23,19 +19,8 @@ export const sendChatMessage = async (req, res) => {
       return res.status(404).json({ message: 'Document not found or unauthorized' });
     }
 
-    if (!fs.existsSync(document.filePath)) {
-      return res.status(404).json({ message: 'Document file missing on server' });
-    }
-
-    // Extract text for context
-    const dataBuffer = fs.readFileSync(document.filePath);
-    let textContent = '';
-    try {
-      const pdfData = await pdfParse(dataBuffer);
-      textContent = pdfData.text;
-    } catch (parseError) {
-      console.warn("PDF Parse Error in Chat:", parseError.message);
-      textContent = "ERROR: The PDF parser could not read text from this document. Please let the user know you cannot see the document contents, but you can still talk to them normally.";
+    if (!document.filePath) {
+      return res.status(404).json({ message: 'Document file URL missing' });
     }
 
     // Get or create chat history
@@ -56,15 +41,15 @@ export const sendChatMessage = async (req, res) => {
       content: msg.content
     }));
 
-    // Call Gemini
+    // Call Gemini — fetches PDF from Cloudinary URL, extracts text, then chats
     let aiResponse;
     try {
-      aiResponse = await chatWithDocument(textContent, formattedHistory, message);
+      aiResponse = await chatWithDocumentUrl(document.filePath, formattedHistory, message);
     } catch (aiError) {
       console.error('Gemini AI Error (will retry with empty history):', aiError.message);
       // If it fails, likely corrupted history. Clear it and retry with no history.
       try {
-        aiResponse = await chatWithDocument(textContent, [], message);
+        aiResponse = await chatWithDocumentUrl(document.filePath, [], message);
         // Reset the stored history since it was causing problems
         chatHistory.history = [];
       } catch (retryError) {

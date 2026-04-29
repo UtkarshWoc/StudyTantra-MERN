@@ -1,21 +1,18 @@
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from '../config/cloudinary.js';
 
-// Create uploads folder if it doesn't exist
-const uploadDir = 'uploads/';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir); // Save files in the uploads folder
+// Configure Cloudinary storage for multer
+// Files are uploaded directly to Cloudinary instead of local disk
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'studytantra_documents', // Cloudinary folder name
+    resource_type: 'raw',            // 'raw' for non-image files like PDFs
+    allowed_formats: ['pdf'],
+    // Use a unique public_id to avoid collisions
+    public_id: (req, file) => `doc-${Date.now()}-${file.originalname.replace(/\.[^.]+$/, '')}`,
   },
-  filename: function (req, file, cb) {
-    // Save file with a unique name
-    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-  }
 });
 
 // File filter (Only allow PDFs)
