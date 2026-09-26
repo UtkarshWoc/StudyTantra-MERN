@@ -46,6 +46,7 @@ const UploadModal = ({ isOpen, onClose }) => {
           },
         };
 
+        if (!user || !user.token) { setIsUploading(false); setErrorMsg('Not logged in — please sign in again'); return; }
         const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/documents`, formData, config);
 
         setIsUploading(false);
