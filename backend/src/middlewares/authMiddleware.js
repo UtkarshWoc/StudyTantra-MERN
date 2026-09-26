@@ -6,10 +6,10 @@ const protect = async (req, res, next) => {
 
   token = req.headers.authorization;
 
-  if (token && token.startsWith('Bearer')) {
+  if (token && token.startsWith('Bearer ')) {
     try {
       token = token.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, { clockTolerance: 30 });
 
       req.user = await User.findById(decoded.userId).select('-password');
       

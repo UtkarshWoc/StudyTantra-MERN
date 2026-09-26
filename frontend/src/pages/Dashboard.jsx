@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, Layers, Sparkles, UploadCloud, Rocket, Loader2, FileText } from 'lucide-react';
+import { Folder, Layers, Sparkles, UploadCloud, Loader2, FileText, ArrowUpRight } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,172 +7,112 @@ import { useNavigate } from 'react-router-dom';
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    metrics: { totalDocuments: 0, totalFlashcards: 0, totalQuizzes: 0, averageScore: 0 },
-    recentActivity: []
-  });
+  const [stats, setStats] = useState({ metrics: { totalDocuments: 0, totalFlashcards: 0, totalQuizzes: 0, averageScore: 0 }, recentActivity: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       if (!user) return;
       try {
-        const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/dashboard`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
+        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard`, { headers: { Authorization: `Bearer ${user.token}` } });
         if (data.metrics) setStats(data);
-      } catch (error) {
-        console.error("Dashboard fetch error", error);
-      } finally {
-        setLoading(false);
-      }
+      } catch (e) { console.error('Dashboard error', e); }
+      finally { setLoading(false); }
     };
     fetchDashboard();
   }, [user]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-        <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-medium">Loading Dashboard...</p>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-24 text-slate-500">
+      <Loader2 className="animate-spin mb-4 text-amber-500" size={36} />
+      <p className="font-medium">Loading overview...</p>
+    </div>
+  );
 
   const { metrics, recentActivity } = stats;
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl p-6 flex items-center justify-between border border-indigo-100 dark:border-indigo-800 transition-colors">
-        <div>
-          <h2 className="text-2xl font-bold text-indigo-900 dark:text-indigo-100 mb-2">Welcome back, {user?.name.split(' ')[0]}!</h2>
-          <p className="text-indigo-700 dark:text-indigo-300">Ready to continue your learning journey?</p>
+    <div className="space-y-8">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e293b] to-[#0b1120] border border-[#334155]/50 shadow-2xl shadow-black/40 p-8 md:p-10">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="relative z-10 max-w-2xl">
+          <p className="text-amber-400 text-xs font-extrabold uppercase tracking-[0.2em] mb-3">Welcome back</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-50 mb-3 leading-tight">Hello, {user?.name?.split(' ')[0] || 'Learner'}.</h2>
+          <p className="text-slate-400 text-base md:text-lg font-light leading-relaxed mb-6">Your study materials are ready. Continue where you left off, or upload new content to generate flashcards and quizzes automatically.</p>
+          <button onClick={() => navigate('/documents')} className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-[#0b1120] font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-amber-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"><UploadCloud size={18} /> Open Library</button>
         </div>
-        <button
-          onClick={() => navigate('/documents')}
-          className="bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium flex items-center shadow-sm transition-colors cursor-pointer"
-        >
-          <UploadCloud size={18} className="mr-2" />
-          Go to Library
-        </button>
-      </div>
+      </section>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center space-x-4 transition-colors">
-          <div className="bg-blue-50 dark:bg-blue-900/40 p-4 rounded-xl text-blue-600 dark:text-blue-400">
-            <Folder size={28} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Total Documents</p>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-3xl font-bold text-gray-900 dark:text-white">{metrics.totalDocuments}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center space-x-4 transition-colors">
-          <div className="bg-indigo-50 dark:bg-indigo-900/40 p-4 rounded-xl text-indigo-600 dark:text-indigo-400">
-            <Layers size={28} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Flashcards</p>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-3xl font-bold text-gray-900 dark:text-white">{metrics.totalFlashcards}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center space-x-4 transition-colors">
-          <div className="bg-purple-50 dark:bg-purple-900/40 p-4 rounded-xl text-purple-600 dark:text-purple-400">
-            <Sparkles size={28} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Avg Quiz Score</p>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-3xl font-bold text-gray-900 dark:text-white">{metrics.averageScore}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Activity</h3>
-            <button onClick={() => navigate('/documents')} className="text-indigo-600 dark:text-indigo-400 text-sm font-medium hover:text-indigo-800 dark:hover:text-indigo-300 cursor-pointer">View Library</button>
-          </div>
-
-          {recentActivity.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 flex flex-col items-center justify-center text-center min-h-[300px] transition-colors">
-              <div className="bg-gray-50 dark:bg-gray-700/50 w-20 h-20 rounded-full flex items-center justify-center mb-4 text-gray-400 dark:text-gray-500">
-                <Layers size={32} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {[
+          { label: 'Documents', value: metrics.totalDocuments, icon: Folder, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          { label: 'Flashcards', value: metrics.totalFlashcards, icon: Layers, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: 'Avg Quiz Score', value: `${metrics.averageScore}%`, icon: Sparkles, color: 'text-violet-400', bg: 'bg-violet-500/10' },
+        ].map(m => (
+          <div key={m.label} className="relative overflow-hidden rounded-2xl bg-[#111827] border border-[#334155]/50 p-6 shadow-xl shadow-black/20 transition-transform hover:-translate-y-0.5">
+            <div className={`absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-30 ${m.bg} blur-2xl pointer-events-none`} />
+            <div className="flex items-start gap-4 relative z-10">
+              <div className={`p-3 rounded-xl ${m.bg} ${m.color} shadow-inner`}><m.icon size={24} strokeWidth={1.8} /></div>
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-1">{m.label}</p>
+                <p className="text-3xl font-extrabold text-slate-50 tracking-tight">{m.value}</p>
               </div>
-              <h4 className="text-gray-900 dark:text-gray-100 font-semibold mb-2">No recent activity</h4>
-              <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm">Upload a new document to generate flashcards and quizzes, and your activity will appear here.</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <section className="lg:col-span-2 rounded-3xl bg-[#111827] border border-[#334155]/50 shadow-xl shadow-black/20 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-lg font-extrabold text-slate-100 tracking-tight">Recent Activity</h3>
+            <button onClick={() => navigate('/documents')} className="text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 cursor-pointer">View Library <ArrowUpRight size={14} /></button>
+          </div>
+          {recentActivity.length === 0 ? (
+            <div className="rounded-2xl bg-[#0b1120] border border-dashed border-[#334155]/60 p-10 text-center flex flex-col items-center min-h-[260px] justify-center">
+              <div className="p-4 rounded-full bg-[#1e293b] text-slate-500 mb-4"><Layers size={28} /></div>
+              <h4 className="text-slate-200 font-bold mb-1">No recent activity</h4>
+              <p className="text-sm text-slate-500 max-w-xs">Upload a document to begin generating study materials.</p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
-              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                {recentActivity.map(doc => (
-                  <li key={doc._id} className="p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => navigate(`/documents/${doc._id}`)}>
-                    <div className="flex items-center">
-                      <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-xl text-indigo-500 mr-4">
-                        <FileText size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white">{doc.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Uploaded {new Date(doc.createdAt).toLocaleDateString()}</p>
-                      </div>
+            <ul className="divide-y divide-[#334155]/30">
+              {recentActivity.map(doc => (
+                <li key={doc._id} className="py-4 flex items-center justify-between hover:bg-white/[0.03] rounded-xl px-2 -mx-2 transition-colors cursor-pointer" onClick={() => navigate(`/documents/${doc._id}`)}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 shrink-0"><FileText size={18} strokeWidth={1.8} /></div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-100 truncate">{doc.title}</p>
+                      <p className="text-[11px] text-slate-500">Uploaded {new Date(doc.createdAt).toLocaleDateString()}</p>
                     </div>
-                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300">Open Document</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 bg-[#1e293b] px-2.5 py-1 rounded-md border border-[#334155]/30 shrink-0">Open</span>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </section>
 
-        {/* Learning Goals & Pro Plan */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-colors">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Learning Goals</h3>
+        <aside className="space-y-5">
+          <section className="rounded-3xl bg-[#111827] border border-[#334155]/50 shadow-xl shadow-black/20 p-6">
+            <h3 className="text-lg font-extrabold text-slate-100 tracking-tight mb-5">Learning Goals</h3>
+            {[
+              { label: 'Daily Flashcards', current: 0, target: 25 },
+              { label: 'Course Completion', current: 0, target: 100 },
+            ].map(g => (
+              <div key={g.label} className="mb-5 last:mb-0">
+                <div className="flex justify-between text-sm mb-2"><span className="text-slate-300 font-medium">{g.label}</span><span className="font-extrabold text-amber-400">{g.current}/{g.target}</span></div>
+                <div className="w-full bg-[#0b1120] rounded-full h-2 overflow-hidden"><div className="bg-gradient-to-r from-amber-500 to-amber-300 h-2 rounded-full" style={{ width: `${(g.current/g.target)*100}%` }} /></div>
+              </div>
+            ))}
+          </section>
 
-            <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600 dark:text-gray-400 font-medium">Daily Flashcards</span>
-                <span className="text-indigo-600 dark:text-indigo-400 font-bold">0/25</span>
-              </div>
-              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full" style={{ width: '0%' }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600 dark:text-gray-400 font-medium">Course Completion</span>
-                <span className="text-indigo-600 dark:text-indigo-400 font-bold">0%</span>
-              </div>
-              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full" style={{ width: '0%' }}></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-800 rounded-2xl p-6 text-white relative overflow-hidden shadow-md">
-            <div className="relative z-10">
-              <h3 className="text-lg font-bold mb-2">Pro Plan Features</h3>
-              <p className="text-indigo-100 dark:text-indigo-200 text-sm mb-6 leading-relaxed">Unlock unlimited AI document summaries and personalized quizzes.</p>
-              <button className="bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 font-bold py-2 px-4 rounded-lg text-sm hover:shadow-lg transition-shadow cursor-pointer">
-                Upgrade Now
-              </button>
-            </div>
-            {/* Decorative Icon */}
-            <Rocket size={120} className="absolute -bottom-6 -right-6 text-white opacity-10 transform rotate-12" />
-          </div>
-        </div>
+          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-900 via-[#78350f] to-[#451a03] p-6 text-white shadow-2xl shadow-amber-950/30">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-400 rounded-full opacity-10 blur-3xl pointer-events-none" />
+            <h3 className="text-xl font-extrabold mb-2 relative z-10">Upgrade to Pro</h3>
+            <p className="text-amber-100/80 text-sm leading-relaxed mb-5 relative z-10">Unlock unlimited AI summaries, advanced quizzes, and priority processing.</p>
+            <button className="relative z-10 bg-white text-[#451a03] font-extrabold py-2.5 px-5 rounded-xl text-sm shadow-lg hover:shadow-xl transition-all cursor-pointer">Upgrade Now</button>
+          </section>
+        </aside>
       </div>
     </div>
   );

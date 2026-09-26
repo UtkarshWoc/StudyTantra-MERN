@@ -3,7 +3,7 @@ import { FileText, Trash2 } from 'lucide-react';
 
 const DocumentCard = ({ title, size, date, onDelete, isFavorited, onFavoriteToggle }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:border-indigo-200 dark:hover:border-indigo-500 hover:shadow-md transition-all group flex items-start justify-between cursor-pointer">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl bg-[#111827] border border-[#334155]/50 shadow-xl shadow-black/10 p-5 hover:border-amber-500/40 hover:shadow-amber-900/10 transition-all group flex items-start justify-between cursor-pointer">
       <div className="flex items-start space-x-4 flex-1 overflow-hidden pr-2">
         <div className="bg-indigo-50 dark:bg-indigo-900/40 p-3 rounded-lg text-indigo-600 dark:text-indigo-400 flex-shrink-0">
           <FileText size={24} />

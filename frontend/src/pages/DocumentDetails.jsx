@@ -19,7 +19,7 @@ const DocumentDetails = () => {
       const fetchDoc = async () => {
         try {
           const config = { headers: { Authorization: `Bearer ${user.token}` } };
-          const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/documents/${id}`, config);
+          const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/documents/${id}`, config);
           setDocument(data);
         } catch (error) {
           console.error("Error fetching doc:", error);

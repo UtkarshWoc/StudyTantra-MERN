@@ -1,38 +1,43 @@
 import React from 'react';
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const { user } = useAuth();
+
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 sticky top-0 z-10 transition-colors duration-200">
-      <div className="flex-1 flex items-center">
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white mr-8">Dashboard Overview</h1>
-        <div className="max-w-md w-full relative hidden md:block">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={18} className="text-gray-400" />
-          </div>
+    <header className="h-16 bg-[#111827]/80 backdrop-blur-md border-b border-[#334155]/60 flex items-center justify-between px-6 sticky top-0 z-10">
+      <div className="flex-1 flex items-center gap-6 min-w-0">
+        <h1 className="text-lg font-extrabold tracking-tight text-slate-100 shrink-0 hidden sm:block">Dashboard</h1>
+        <div className="max-w-lg w-full relative hidden md:block">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
           <input
             type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-100 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Search your library..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#0b1120] border border-[#334155]/60 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40 focus:border-amber-500/60 transition-all shadow-inner shadow-black/20"
+            placeholder="Search documents, topics..."
           />
         </div>
       </div>
-      <div className="flex items-center space-x-4">
-        <button className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-          <Bell size={20} />
+
+      <div className="flex items-center gap-3 shrink-0">
+        <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-amber-300 transition-colors relative cursor-pointer">
+          <Bell size={18} strokeWidth={1.8} />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-[#111827]" aria-hidden />
         </button>
-        <div className="border-l border-gray-200 dark:border-gray-700 h-8 mx-2"></div>
-        <div className="flex items-center space-x-3 cursor-pointer">
-          <div className="text-right hidden md:block">
-            <p className="text-sm font-medium text-gray-900 dark:text-white leading-none">{user?.name || 'User'}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Free Plan</p>
-          </div>
-          <div className="h-8 w-8 rounded-full bg-orange-200 flex items-center justify-center text-orange-600 font-bold text-sm">
+
+        <div className="h-6 w-px bg-[#334155]/60 mx-0.5" />
+
+        <button className="flex items-center gap-2.5 hover:bg-white/5 rounded-xl px-2 py-1.5 transition-colors cursor-pointer" aria-label="Profile">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white text-xs font-extrabold shadow-lg shadow-amber-900/30 ring-2 ring-amber-500/20">
             {user?.name?.charAt(0) || 'U'}
           </div>
-        </div>
+          <div className="text-right hidden md:block leading-tight">
+            <p className="text-[13px] font-semibold text-slate-200">{user?.name || 'User'}</p>
+            <div className="flex items-center gap-1 text-[11px] text-amber-400 font-medium mt-0.5">
+              <Sparkles size={10} /> Pro Plan
+            </div>
+          </div>
+        </button>
       </div>
     </header>
   );
