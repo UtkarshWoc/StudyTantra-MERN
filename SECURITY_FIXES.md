@@ -7,3 +7,4 @@ SECURITY FIXES EXECUTED
 - Created frontend/.env with VITE_API_URL
 - Replaced all REACT_APP with VITE_API_URL + import.meta.env
 - npm audit: 8 vulns (high/moderate) — recommend `npm audit fix` post-deploy
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
