@@ -111,7 +111,7 @@ const UploadModal = ({ isOpen, onClose }) => {
                     <input
                       type="file"
                       className="hidden"
-                      accept=".pdf,.doc,.docx,.txt"
+                      accept=".pdf"
                       onChange={(e) => handleFileSelection(e.target.files[0])}
                     />
                   </label>
