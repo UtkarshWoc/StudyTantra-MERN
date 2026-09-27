@@ -10,12 +10,44 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+
+  // 401 interceptor: on expired token, clear session and redirect
+  useEffect(() => {
+    const id = axios.interceptors.response.use(
+      r => r,
+      err => {
+        if (err.response?.status === 401) {
+          setUser(null);
+          localStorage.removeItem('userInfo');
+          window.location.href = '/login';
+        }
+        return Promise.reject(err);
+      }
+    );
+    return () => axios.interceptors.response.eject(id);
+  }, [setUser]);
+
   // On mount, check localStorage for an existing session
   useEffect(() => {
     const storedUserInfo = localStorage.getItem('userInfo');
     if (storedUserInfo) {
       try {
-        setUser(JSON.parse(storedUserInfo));
+        const parsed = JSON.parse(storedUserInfo);
+        if (parsed.token && typeof parsed.token === 'string') {
+          try {
+            const payload = JSON.parse(Buffer.from(parsed.token.split('.')[1], 'base64').toString());
+            if (payload.exp && payload.exp * 1000 < Date.now()) {
+              localStorage.removeItem('userInfo');
+              setUser(null);
+            } else {
+              setUser(parsed);
+            }
+          } catch {
+            setUser(parsed);
+          }
+        } else {
+          setUser(parsed);
+        }
       } catch {
         localStorage.removeItem('userInfo');
       }
