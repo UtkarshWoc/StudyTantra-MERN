@@ -6,14 +6,14 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   // Safely fallback to localhost:5000, and enforce protocol prefix to prevent relative path mapping
-  let baseURL = env.REACT_APP_API_URL || 'http://localhost:5000';
+  let baseURL = env.VITE_API_URL || 'http://localhost:5000';
   if (baseURL && !/^https?:\/\//i.test(baseURL)) {
     baseURL = `https://${baseURL}`;
   }
 
   return {
     define: {
-      'process.env.REACT_APP_API_URL': JSON.stringify(baseURL)
+      'process.env.VITE_API_URL': JSON.stringify(baseURL)
     },
     plugins: [
       tailwindcss(),
