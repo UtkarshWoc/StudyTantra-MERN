@@ -156,13 +156,11 @@ export const chatWithDocument = async (documentText, historyMessages, newMessage
  */
 export const chatWithDocumentUrl = async (fileUrl, historyMessages, newMessage) => {
   // For chat, we still need to extract text since Gemini startChat doesn't support fileData inline
-  // We fetch the PDF and extract text with pdf-parse
+  // Import pdf-parse/lib/pdf-parse.js directly to avoid its startup side-effect that crashes
+  // in ESM environments by trying to load a test file from a hard-coded relative path.
   let textContent = '';
   try {
-    const { createRequire } = await import('module');
-    const require = createRequire(import.meta.url);
-    const pdfParse = require('pdf-parse');
-    
+    const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
     const pdfBuffer = await fetchPdfBuffer(fileUrl);
     const pdfData = await pdfParse(pdfBuffer);
     textContent = pdfData.text;
