@@ -1,1 +1,12 @@
-{"name":"study-tantra-mern","version":"1.0.0","workspaces":["frontend","backend"]}
+{
+  "name": "study-tantra-mern",
+  "version": "1.0.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "start": "npm start --workspace=backend",
+    "build": "npm install"
+  }
+}

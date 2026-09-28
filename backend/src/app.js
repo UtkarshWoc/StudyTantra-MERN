@@ -39,7 +39,8 @@ app.use(cors({
     if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
       callback(null, true);
     } else {
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
+      // Return false to gracefully deny access without throwing an exception
+      callback(null, false);
     }
   },
   methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
