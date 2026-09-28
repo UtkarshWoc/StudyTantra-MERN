@@ -24,7 +24,8 @@ app.set('trust proxy', 1);
 // CORS: Must be defined before other middlewares so rejected requests still get CORS headers
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'https://study-tantra-mern.vercel.app',
 ];
 
 if (process.env.ALLOWED_ORIGIN) {
