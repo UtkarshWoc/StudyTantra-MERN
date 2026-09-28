@@ -18,6 +18,35 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy for rate limiter to work correctly behind reverse proxies like Railway
+app.set('trust proxy', 1);
+
+// CORS: Must be defined before other middlewares so rejected requests still get CORS headers
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
+if (process.env.ALLOWED_ORIGIN) {
+  // Support comma-separated list of origins
+  const envOrigins = process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim());
+  allowedOrigins.push(...envOrigins);
+}
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (e.g. mobile apps, curl) or if origin is in our whitelist
+    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
+  methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  credentials: true,
+}));
+
 // Security headers
 app.use(helmet());
 
@@ -30,14 +59,6 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
 });
 app.use('/api/', limiter);
-
-// CORS: locked to frontend only
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
-  methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
-  credentials: true,
-}));
 
 // Middleware
 app.use(express.json());

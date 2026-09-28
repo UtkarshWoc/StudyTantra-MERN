@@ -7,9 +7,9 @@ export default defineConfig(({ mode }) => {
 
   // Safely fallback to localhost:5000, and enforce protocol prefix to prevent relative path mapping
   let baseURL = env.VITE_API_URL || 'http://localhost:5000';
-  if (baseURL && !/^https?:\/\//i.test(baseURL)) {
-    baseURL = `https://${baseURL}`;
-  }
+  // if (baseURL && !/^https?:\/\//i.test(baseURL)) {
+  //   baseURL = `https://${baseURL}`;
+  // }
 
   return {
     define: {
