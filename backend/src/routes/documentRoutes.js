@@ -7,10 +7,13 @@ import {
   toggleFavorite,
   getDocumentFile,
   reprocessDocument,
+  updateDocument,
 } from '../controllers/documentController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import upload from '../middlewares/uploadMiddleware.js';
 import { aiRateLimit } from '../middlewares/aiRateLimit.js';
+import { validate } from '../middlewares/validate.js';
+import { documentUpdateSchema } from '../validators/learningSchemas.js';
 
 const router = express.Router();
 
@@ -22,6 +25,7 @@ router.route('/')
 // Single document operations
 router.route('/:id')
   .get(protect, getDocumentById)
+  .patch(protect, validate({ body: documentUpdateSchema }), updateDocument)
   .delete(protect, deleteDocument);
 
 router.get('/:id/file', protect, getDocumentFile);

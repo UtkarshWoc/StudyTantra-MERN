@@ -15,10 +15,14 @@ const quizSchema = new mongoose.Schema({
     required: true,
     ref: 'User',
   },
+  // Exactly one of document / collectionId is set
   document: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
     ref: 'Document',
+  },
+  collectionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Collection',
   },
   questions: [questionSchema],
   // How the quiz was generated, shown in the UI
@@ -49,6 +53,7 @@ const quizSchema = new mongoose.Schema({
 });
 
 quizSchema.index({ user: 1, document: 1, createdAt: -1 });
+quizSchema.index({ user: 1, collectionId: 1, createdAt: -1 });
 
 // Strip answers/explanations so a quiz can be taken without the client knowing the key.
 quizSchema.methods.toPublicJSON = function () {

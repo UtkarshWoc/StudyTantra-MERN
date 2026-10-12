@@ -16,6 +16,12 @@ const documentSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Optional grouping (e.g. "Semester 5 – DBMS")
+  collectionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Collection',
+    default: null,
+  },
   filename: {
     type: String,
     required: true,
@@ -75,6 +81,7 @@ const documentSchema = new mongoose.Schema({
 });
 
 documentSchema.index({ user: 1, createdAt: -1 });
+documentSchema.index({ user: 1, collectionId: 1 });
 
 const Document = mongoose.model('Document', documentSchema);
 export default Document;

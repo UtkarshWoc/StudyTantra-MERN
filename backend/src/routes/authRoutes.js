@@ -15,7 +15,10 @@ import {
   updateUserProfile,
   changePassword,
   deleteAccount,
+  updatePreferences,
 } from '../controllers/authController.js';
+import { preferencesSchema } from '../validators/learningSchemas.js';
+import { emailRateLimit } from '../middlewares/aiRateLimit.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { validate } from '../middlewares/validate.js';
 import { isTest } from '../config/env.js';
@@ -55,8 +58,9 @@ router.post('/logout', logout);
 
 router.get('/me', protect, getMe);
 router.post('/logout-others', protect, logoutOthers);
-router.post('/resend-verification', protect, resendVerification);
-router.put('/profile', protect, validate({ body: updateProfileSchema }), updateUserProfile);
+router.post('/resend-verification', protect, emailRateLimit, resendVerification);
+router.put('/profile', protect, emailRateLimit, validate({ body: updateProfileSchema }), updateUserProfile);
+router.put('/preferences', protect, validate({ body: preferencesSchema }), updatePreferences);
 router.put('/password', protect, validate({ body: changePasswordSchema }), changePassword);
 router.delete('/account', protect, validate({ body: deleteAccountSchema }), deleteAccount);
 

@@ -196,3 +196,56 @@ export const ocrPdf = async ({ pdf }) => {
   });
   return Array.isArray(result?.pages) ? result.pages : [];
 };
+
+// ---- Study planner ----
+
+const planSchema = {
+  type: 'object',
+  properties: {
+    days: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', description: 'YYYY-MM-DD, one of the provided dates' },
+          tasks: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', enum: ['read', 'review', 'flashcards', 'quiz'] },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                documentId: { type: 'string', description: 'id of the document this task uses' },
+                topic: { type: 'string' },
+                minutes: { type: 'integer' },
+              },
+              required: ['type', 'title', 'minutes'],
+            },
+          },
+        },
+        required: ['date', 'tasks'],
+      },
+    },
+  },
+  required: ['days'],
+};
+
+/**
+ * Build a day-by-day exam plan. documents: [{ id, title, topics: [], summary }]
+ */
+export const generateStudyPlan = ({ documents, days, minutesPerDay, weakTopics = [], examDate }) =>
+  provider.generateJSON({
+    system: `${BASE_SYSTEM}\nYou are an expert study coach who builds realistic exam preparation schedules.`,
+    schema: planSchema,
+    parts: [{
+      text: `Create a study plan for an exam on ${examDate}.
+Plan exactly these dates: ${days.join(', ')}.
+Budget about ${minutesPerDay} minutes per day (task minutes should add up to roughly that).
+Principles: first cover all material (read + flashcards), interleave topics, revisit weak topics more often, use spaced review, and finish with full quizzes in the final days. Keep 1-4 tasks per day with short, specific titles.
+Weak topics to prioritise: ${weakTopics.length ? weakTopics.join(', ') : 'none known yet'}.
+Documents (use their ids in documentId):
+${JSON.stringify(documents)}`,
+    }],
+    mock: { kind: 'plan', days },
+  });

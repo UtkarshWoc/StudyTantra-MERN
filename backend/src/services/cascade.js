@@ -7,6 +7,9 @@ import User from '../models/User.js';
 import Session from '../models/Session.js';
 import Chunk from '../models/Chunk.js';
 import DocumentPage from '../models/DocumentPage.js';
+import Activity from '../models/Activity.js';
+import Collection from '../models/Collection.js';
+import StudyPlan from '../models/StudyPlan.js';
 import { deleteFile } from './storage.js';
 
 // Everything that hangs off a document. Keep this list in sync when adding
@@ -20,6 +23,7 @@ export const deleteDocumentCascade = async (doc) => {
     ChatHistory.deleteMany({ document: doc._id }),
     Chunk.deleteMany({ document: doc._id }),
     DocumentPage.deleteMany({ document: doc._id }),
+    StudyPlan.updateMany({ documents: doc._id }, { $pull: { documents: doc._id } }),
   ]);
   await doc.deleteOne();
 };
@@ -35,6 +39,9 @@ export const deleteUserCascade = async (userId) => {
     QuizAttempt.deleteMany({ user: userId }),
     ChatHistory.deleteMany({ user: userId }),
     Session.deleteMany({ user: userId }),
+    Activity.deleteMany({ user: userId }),
+    Collection.deleteMany({ user: userId }),
+    StudyPlan.deleteMany({ user: userId }),
   ]);
   await User.deleteOne({ _id: userId });
 };

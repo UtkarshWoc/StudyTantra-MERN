@@ -1,4 +1,6 @@
 import Document from '../models/Document.js';
+import Collection from '../models/Collection.js';
+import { recordActivity } from '../services/activity.js';
 import { saveFile, readFile } from '../services/storage.js';
 import { deleteDocumentCascade } from '../services/cascade.js';
 import { enqueueIngestion } from '../services/ingestion/queue.js';
@@ -30,6 +32,7 @@ export const uploadDocument = async (req, res) => {
 
   // Text extraction, OCR and embeddings run in the background; the client polls status.
   enqueueIngestion(document._id);
+  await recordActivity(req.user._id, 'upload', { document: document._id });
   res.status(201).json(document);
 };
 
@@ -76,6 +79,21 @@ export const reprocessDocument = async (req, res) => {
   await document.save();
   enqueueIngestion(document._id);
   res.status(202).json(document);
+};
+
+// @desc    Rename a document or move it into/out of a collection
+// @route   PATCH /api/documents/:id
+// @access  Private
+export const updateDocument = async (req, res) => {
+  const document = await findOwned(Document, req.params.id, req.user._id, 'Document');
+  const { title, collectionId } = req.body;
+  if (title) document.title = title;
+  if (collectionId !== undefined) {
+    if (collectionId) await findOwned(Collection, collectionId, req.user._id, 'Collection');
+    document.collectionId = collectionId;
+  }
+  await document.save();
+  res.json(document);
 };
 
 // @desc    Delete a document and everything generated from it

@@ -16,6 +16,7 @@ import flashcardRoutes from "./routes/flashcardRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import { reviewRoutes, insightsRoutes, collectionRoutes, planRoutes } from "./routes/learningRoutes.js";
 import { notFound, errorHandler } from "./middlewares/errorMiddleware.js";
 
 const app = express();
@@ -97,6 +98,10 @@ app.use("/api/flashcards", flashcardRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/review", reviewRoutes);
+app.use("/api/insights", insightsRoutes);
+app.use("/api/collections", collectionRoutes);
+app.use("/api/plans", planRoutes);
 
 // Error Handling Middleware
 app.use(notFound);

@@ -2,7 +2,9 @@ import Document from '../models/Document.js';
 import Quiz from '../models/Quiz.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import { generateQuiz as aiGenerateQuiz } from '../services/ai/index.js';
-import { buildStudySource } from '../services/studySource.js';
+import Collection from '../models/Collection.js';
+import { buildStudySource, buildCollectionSource } from '../services/studySource.js';
+import { recordActivity } from '../services/activity.js';
 import { findOwned } from '../utils/ownership.js';
 import { gradeQuestions } from '../utils/grading.js';
 import { badRequest, HttpError } from '../utils/httpError.js';
@@ -33,16 +35,16 @@ export const sanitizeQuestions = (questions, { count, types }) =>
 const describeScope = (scope) =>
   scope.type === 'pages' ? `Pages ${scope.from}-${scope.to}` : scope.type === 'topic' ? `Topic: ${scope.query}` : 'Whole document';
 
-// @desc    Generate a quiz from a document
-// @route   POST /api/quizzes/generate/:docId
-// @access  Private
-export const generateQuiz = async (req, res) => {
-  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+/**
+ * Shared generation for document and collection quizzes. `owner` is
+ * { document } or { collectionId }.
+ */
+const createQuiz = async (req, res, { owner, source }) => {
   const { count, scope, difficulty, types } = req.body;
+  const { text, focus } = source;
 
-  const { text, focus } = await buildStudySource(document, scope);
-  // Avoid repeating questions from this document's recent quizzes
-  const recent = await Quiz.find({ document: document._id, user: req.user._id }).sort({ createdAt: -1 }).limit(5).select('questions.question').lean();
+  // Avoid repeating questions from recent quizzes on the same material
+  const recent = await Quiz.find({ ...owner, user: req.user._id }).sort({ createdAt: -1 }).limit(5).select('questions.question').lean();
   const avoid = recent.flatMap((q) => q.questions.map((x) => x.question));
 
   const generated = await aiGenerateQuiz({ source: { text }, count, types, focus, difficulty, avoid });
@@ -53,14 +55,43 @@ export const generateQuiz = async (req, res) => {
 
   const quiz = await Quiz.create({
     user: req.user._id,
-    document: document._id,
+    ...owner,
     questions,
     totalQuestions: questions.length,
     scope: describeScope(scope),
     difficulty,
   });
 
+  await recordActivity(req.user._id, 'generate', { document: owner.document, meta: { kind: 'quiz', count: questions.length } });
   res.status(201).json({ message: 'Quiz generated', quiz: quiz.toPublicJSON() });
+};
+
+// @desc    Generate a quiz from a document
+// @route   POST /api/quizzes/generate/:docId
+// @access  Private
+export const generateQuiz = async (req, res) => {
+  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  const source = await buildStudySource(document, req.body.scope);
+  return createQuiz(req, res, { owner: { document: document._id }, source });
+};
+
+// @desc    Generate a quiz across every processed document in a collection
+// @route   POST /api/quizzes/generate/collection/:collectionId
+// @access  Private
+export const generateCollectionQuiz = async (req, res) => {
+  const collection = await findOwned(Collection, req.params.collectionId, req.user._id, 'Collection');
+  const docs = await Document.find({ user: req.user._id, collectionId: collection._id });
+  const source = await buildCollectionSource(docs, req.body.scope);
+  return createQuiz(req, res, { owner: { collectionId: collection._id }, source });
+};
+
+// @desc    Quizzes for a collection (answers hidden)
+// @route   GET /api/quizzes/collection/:collectionId
+// @access  Private
+export const getQuizzesByCollection = async (req, res) => {
+  const collection = await findOwned(Collection, req.params.collectionId, req.user._id, 'Collection');
+  const quizzes = await Quiz.find({ collectionId: collection._id, user: req.user._id }).sort({ createdAt: -1 });
+  res.json(quizzes.map((q) => q.toPublicJSON()));
 };
 
 // @desc    Get all quizzes for a document (answers hidden)
@@ -123,6 +154,7 @@ export const submitQuiz = async (req, res) => {
     user: req.user._id,
     quiz: quiz._id,
     document: quiz.document,
+    collectionId: quiz.collectionId,
     answers: graded,
     score,
     total,
@@ -134,6 +166,7 @@ export const submitQuiz = async (req, res) => {
   quiz.attemptsCount += 1;
   quiz.bestScore = Math.max(quiz.bestScore || 0, score);
   await quiz.save();
+  await recordActivity(req.user._id, 'quiz', { document: quiz.document, meta: { score, total, percentage } });
 
   // Once submitted, the full answer key is returned for review.
   res.json({ message: 'Quiz submitted', score, total, percentage, attempt, quiz: quiz.toJSON() });

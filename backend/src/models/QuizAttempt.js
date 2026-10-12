@@ -12,6 +12,7 @@ const quizAttemptSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
   quiz: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Quiz' },
   document: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+  collectionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection' },
   answers: [answerSchema],
   score: { type: Number, required: true },
   total: { type: Number, required: true },

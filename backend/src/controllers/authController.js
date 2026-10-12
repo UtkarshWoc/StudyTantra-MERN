@@ -18,10 +18,17 @@ import { badRequest, conflict, unauthorized, HttpError } from '../utils/httpErro
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
 const RECENT_LOGIN_MS = 15 * 60 * 1000;
+// Minimum gap between emails of the same kind to one account (anti email-bombing)
+const EMAIL_COOLDOWN_MS = 60 * 1000;
+
+const sentRecently = (expiresAt, ttl) => Boolean(expiresAt) && expiresAt.getTime() - ttl > Date.now() - EMAIL_COOLDOWN_MS;
 
 // Sends a verification link to the address being proven: a pending email
 // change if there is one, otherwise the account's current email.
-const issueVerification = async (user) => {
+// `newAddress` skips the cooldown: it's a different recipient (and email
+// changes are already capped per user by emailRateLimit).
+const issueVerification = async (user, { newAddress = false } = {}) => {
+  if (!newAddress && sentRecently(user.emailVerificationExpires, VERIFY_TTL_MS)) return;
   const token = randomToken();
   user.emailVerificationTokenHash = hashToken(token);
   user.emailVerificationExpires = new Date(Date.now() + VERIFY_TTL_MS);
@@ -147,6 +154,16 @@ export const getMe = async (req, res) => {
   res.json({ user: user.toPublicJSON() });
 };
 
+// @desc    Update study preferences (daily goal, new cards per day, timezone)
+// @route   PUT /api/auth/preferences
+// @access  Private
+export const updatePreferences = async (req, res) => {
+  const user = await User.findById(req.user._id);
+  for (const [key, value] of Object.entries(req.body)) user.set(`preferences.${key}`, value);
+  await user.save();
+  res.json({ user: user.toPublicJSON() });
+};
+
 // @desc    Verify email with the emailed token
 // @route   POST /api/auth/verify-email
 // @access  Public
@@ -190,7 +207,7 @@ export const resendVerification = async (req, res) => {
 // @access  Public
 export const forgotPassword = async (req, res) => {
   const user = await User.findOne({ email: req.body.email });
-  if (user) {
+  if (user && !sentRecently(user.passwordResetExpires, RESET_TTL_MS)) {
     const token = randomToken();
     user.passwordResetTokenHash = hashToken(token);
     user.passwordResetExpires = new Date(Date.now() + RESET_TTL_MS);
@@ -246,7 +263,7 @@ export const updateUserProfile = async (req, res) => {
       throw conflict('An account with this email already exists');
     }
     user.pendingEmail = email;
-    await issueVerification(user);
+    await issueVerification(user, { newAddress: true });
     message = `We sent a confirmation link to ${email}. Your email changes once you open it.`;
   }
 

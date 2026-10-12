@@ -5,6 +5,7 @@ import { buildStudySource, ensureReady } from '../services/studySource.js';
 import { retrieveChunks } from '../services/retrieval.js';
 import { findOwned } from '../utils/ownership.js';
 import { HttpError } from '../utils/httpError.js';
+import { recordActivity } from '../services/activity.js';
 
 const normalizeQuestion = (q) => String(q).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
@@ -39,6 +40,7 @@ export const generateFlashcards = async (req, res) => {
   if (replace) await Flashcard.deleteMany({ document: document._id, user: req.user._id });
   const saved = await Flashcard.insertMany(cards);
   const flashcards = await Flashcard.find({ document: document._id, user: req.user._id }).sort({ createdAt: 1 });
+  await recordActivity(req.user._id, 'generate', { document: document._id, meta: { kind: 'flashcards', count: saved.length } });
 
   res.status(201).json({ message: `${saved.length} flashcards added`, added: saved.length, flashcards });
 };
@@ -87,4 +89,41 @@ export const deleteFlashcard = async (req, res) => {
   const flashcard = await findOwned(Flashcard, req.params.id, req.user._id, 'Flashcard');
   await flashcard.deleteOne();
   res.json({ message: 'Flashcard deleted' });
+};
+
+const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+// Anki's text import splits on tabs/newlines, so flatten those inside fields
+const ankiCell = (value) => String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+
+// @desc    Export a document's flashcards as CSV or an Anki import file
+// @route   GET /api/flashcards/export/:docId?format=csv|anki
+// @access  Private
+export const exportFlashcards = async (req, res) => {
+  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  const { format } = req.validatedQuery;
+  const cards = await Flashcard.find({ document: document._id, user: req.user._id }).sort({ createdAt: 1 }).lean();
+  const base = document.title.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 60) || 'flashcards';
+
+  let body;
+  let filename;
+  if (format === 'anki') {
+    body = [
+      '#separator:tab',
+      '#html:false',
+      `#deck:${ankiCell(document.title)}`,
+      '#tags column:3',
+      ...cards.map((c) => [ankiCell(c.question), ankiCell(c.answer), ankiCell(c.topic).replace(/\s+/g, '_')].join('\t')),
+    ].join('\n');
+    filename = `${base}-anki.txt`;
+  } else {
+    // BOM so Excel opens UTF-8 CSVs correctly
+    body = '﻿' + ['question,answer,topic', ...cards.map((c) => [c.question, c.answer, c.topic].map(csvCell).join(','))].join('\r\n');
+    filename = `${base}.csv`;
+  }
+
+  res.set({
+    'Content-Type': format === 'anki' ? 'text/plain; charset=utf-8' : 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="${filename}"`,
+  });
+  res.send(body);
 };

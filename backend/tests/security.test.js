@@ -145,3 +145,29 @@ describe('email templates', () => {
     expect(testOutbox[0].html).toContain('&lt;a href=');
   });
 });
+
+describe('email bombing protection', () => {
+  it('sends at most one verification / reset email per address per minute', async () => {
+    const { token, email } = await h.registerUser();
+    testOutbox.length = 0;
+    // Registration just sent one; immediate resends are swallowed
+    await h.api().post('/api/auth/resend-verification').set(h.auth(token)).expect(200);
+    await h.api().post('/api/auth/resend-verification').set(h.auth(token)).expect(200);
+    expect(testOutbox).toHaveLength(0);
+
+    await h.api().post('/api/auth/forgot-password').send({ email }).expect(200);
+    await h.api().post('/api/auth/forgot-password').send({ email }).expect(200);
+    await h.api().post('/api/auth/forgot-password').send({ email }).expect(200);
+    expect(testOutbox).toHaveLength(1);
+  });
+
+  it('caps email-sending account endpoints per user', async () => {
+    const { token } = await h.registerUser();
+    const statuses = [];
+    for (let i = 0; i < 6; i++) {
+      statuses.push((await h.api().post('/api/auth/resend-verification').set(h.auth(token))).status);
+    }
+    expect(statuses.slice(0, 5).every((s) => s === 200)).toBe(true);
+    expect(statuses[5]).toBe(429);
+  });
+});

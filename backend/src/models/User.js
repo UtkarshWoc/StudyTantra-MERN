@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema({
   emailVerificationExpires: Date,
   passwordResetTokenHash: String,
   passwordResetExpires: Date,
+  // Study settings used by reviews, streaks and the dashboard
+  preferences: {
+    dailyGoal: { type: Number, default: 20 }, // flashcard reviews per day
+    newCardsPerDay: { type: Number, default: 20 },
+    timezone: { type: String, default: 'UTC' }, // IANA name, for day boundaries
+  },
   // Bumped on password change/reset; access tokens carrying an older version are rejected.
   tokenVersion: {
     type: Number,
@@ -60,6 +66,11 @@ userSchema.methods.toPublicJSON = function () {
     pendingEmail: this.pendingEmail || null,
     hasPassword: Boolean(this.password),
     googleLinked: Boolean(this.googleId),
+    preferences: {
+      dailyGoal: this.preferences?.dailyGoal ?? 20,
+      newCardsPerDay: this.preferences?.newCardsPerDay ?? 20,
+      timezone: this.preferences?.timezone || 'UTC',
+    },
     createdAt: this.createdAt,
   };
 };

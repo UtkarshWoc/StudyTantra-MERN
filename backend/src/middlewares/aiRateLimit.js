@@ -17,6 +17,9 @@ export const aiRateLimit = perUserHourly(
   'You have reached the hourly AI usage limit. Please try again later.'
 );
 
+// Endpoints that send email from a signed-in account (resend verification, email change)
+export const emailRateLimit = perUserHourly(5, 'Too many emails requested. Please try again later.');
+
 // Answer checking/submission may call the AI to grade free-text answers. Kept
 // separate and higher so taking quizzes doesn't consume the generation budget.
 export const gradingRateLimit = perUserHourly(
