@@ -1,20 +1,19 @@
 import Document from '../models/Document.js';
 import ChatHistory from '../models/ChatHistory.js';
-import { chatWithDocumentPdf } from '../utils/geminiAI.js';
+import { chatReply } from '../services/ai/index.js';
 import { readFile } from '../services/storage.js';
+import { extractPdfPages, pagesToText } from '../services/pdf.js';
 import { findOwned } from '../utils/ownership.js';
-import { badRequest, HttpError } from '../utils/httpError.js';
+import { HttpError } from '../utils/httpError.js';
 
-const MAX_MESSAGE_LENGTH = 4000;
+// Only the most recent turns are sent back to the model.
+const HISTORY_TURNS = 20;
 
 // @desc    Send a message in the document chat
 // @route   POST /api/chat/:docId
 // @access  Private
 export const sendChatMessage = async (req, res) => {
-  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
-  if (!message) throw badRequest('Message text is required');
-  if (message.length > MAX_MESSAGE_LENGTH) throw badRequest(`Message must be under ${MAX_MESSAGE_LENGTH} characters`);
-
+  const { message } = req.body;
   const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
 
   let chatHistory = await ChatHistory.findOne({ document: document._id, user: req.user._id });
@@ -22,26 +21,26 @@ export const sendChatMessage = async (req, res) => {
     chatHistory = new ChatHistory({ document: document._id, user: req.user._id, history: [] });
   }
 
-  const formattedHistory = chatHistory.history.map((msg) => ({
-    role: msg.role === 'model' ? 'model' : 'user',
-    content: msg.content,
-  }));
+  let context = '';
+  try {
+    context = pagesToText((await extractPdfPages(await readFile(document))).pages);
+  } catch (err) {
+    req.log?.warn({ err: err.message }, 'PDF text extraction failed for chat');
+  }
 
-  const pdfBuffer = await readFile(document);
+  const history = chatHistory.history
+    .filter((m) => m.content?.trim())
+    .slice(-HISTORY_TURNS)
+    .map((m) => ({ role: m.role, content: m.content }));
+  // The model expects the conversation to start with a user turn.
+  while (history[0]?.role === 'model') history.shift();
 
   let aiResponse;
   try {
-    aiResponse = await chatWithDocumentPdf(pdfBuffer, formattedHistory, message);
-  } catch (aiError) {
-    console.error('Gemini AI Error (will retry with empty history):', aiError.message);
-    // A corrupted history is the usual cause; retry once without it.
-    try {
-      aiResponse = await chatWithDocumentPdf(pdfBuffer, [], message);
-      chatHistory.history = [];
-    } catch (retryError) {
-      console.error('Gemini AI Retry Error:', retryError.message);
-      throw new HttpError(502, 'The AI service is unavailable right now. Please try again.');
-    }
+    aiResponse = await chatReply({ context, history, message });
+  } catch (err) {
+    req.log?.error({ err: err.message }, 'AI chat failed');
+    throw new HttpError(502, 'The AI service is unavailable right now. Please try again.');
   }
 
   chatHistory.history.push({ role: 'user', content: message });

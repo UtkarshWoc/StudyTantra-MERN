@@ -2,8 +2,13 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import mongoose from "mongoose";
+import pinoHttp from "pino-http";
+import * as Sentry from "@sentry/node";
 
+import { env } from "./config/env.js";
+import { logger } from "./config/logger.js";
 import authRoutes from "./routes/authRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
@@ -12,13 +17,10 @@ import chatRoutes from "./routes/chatRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import { notFound, errorHandler } from "./middlewares/errorMiddleware.js";
-import mongoose from "mongoose";
-
-dotenv.config();
 
 const app = express();
 
-// Trust proxy for rate limiter to work correctly behind reverse proxies like Railway
+// Trust proxy for rate limiter / secure cookies behind reverse proxies like Railway
 app.set('trust proxy', 1);
 
 // CORS: Must be defined before other middlewares so rejected requests still get CORS headers
@@ -29,7 +31,7 @@ const allowedOrigins = new Set([
   'http://localhost:3000',
   'https://study-tantra-mern.vercel.app',
   // Supports a comma-separated list of origins
-  ...(process.env.ALLOWED_ORIGIN || '').split(',').filter(Boolean).map(normalizeOrigin),
+  ...(env.ALLOWED_ORIGIN || '').split(',').filter(Boolean).map(normalizeOrigin),
 ]);
 
 app.use(cors({
@@ -46,19 +48,27 @@ app.use(cors({
 // Security headers
 app.use(helmet());
 
-// Rate limiting (100 req per 15 min per IP)
+// Structured request logging (auth headers/cookies are redacted in config/logger.js)
+app.use(pinoHttp({
+  logger,
+  autoLogging: { ignore: (req) => req.url === '/healthz' },
+  customLogLevel: (req, res, err) => (err || res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info'),
+}));
+
+// Rate limiting (per IP) for the whole API; AI routes add a per-user limit on top
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'Too many requests from this IP, please try again later.',
+  message: { message: 'Too many requests from this IP, please try again later.' },
 });
 app.use('/api/', limiter);
 
 // Middleware
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(cookieParser());
 
 // Health check routes. /healthz reports 503 until MongoDB is connected so
 // platform health checks don't mark a DB-less instance as healthy.
@@ -87,10 +97,10 @@ app.use("/api/flashcards", flashcardRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-// Files are served from Cloudinary — no local static file serving needed
 
 // Error Handling Middleware
 app.use(notFound);
+if (env.SENTRY_DSN) Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);
 
 export default app;

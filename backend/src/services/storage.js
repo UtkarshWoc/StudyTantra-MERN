@@ -2,15 +2,17 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import cloudinary from '../config/cloudinary.js';
+import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
 
 // Files are private: Cloudinary assets are uploaded with type "authenticated" and
 // only ever reach the browser through GET /api/documents/:id/file (auth-checked).
 // STORAGE_DRIVER=local stores files on disk instead (dev without Cloudinary, tests).
 
-const LOCAL_DIR = path.resolve(process.env.LOCAL_UPLOAD_DIR || 'uploads');
+const LOCAL_DIR = path.resolve(env.LOCAL_UPLOAD_DIR);
 const CLOUDINARY_FOLDER = 'studytantra_documents';
 
-export const storageDriver = () => process.env.STORAGE_DRIVER || 'cloudinary';
+export const storageDriver = () => env.STORAGE_DRIVER;
 
 const safeName = (name) =>
   (name || 'document')
@@ -88,6 +90,6 @@ export const deleteFile = async (doc) => {
       await cloudinary.uploader.destroy(doc.storageKey, { resource_type: 'raw', type: 'authenticated' });
     }
   } catch (err) {
-    console.warn('File deletion warning:', err.message);
+    logger.warn({ err: err.message }, 'File deletion warning');
   }
 };

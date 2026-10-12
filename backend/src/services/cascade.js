@@ -4,6 +4,7 @@ import Quiz from '../models/Quiz.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import ChatHistory from '../models/ChatHistory.js';
 import User from '../models/User.js';
+import Session from '../models/Session.js';
 import { deleteFile } from './storage.js';
 
 // Everything that hangs off a document. Keep this list in sync when adding
@@ -29,6 +30,7 @@ export const deleteUserCascade = async (userId) => {
     Quiz.deleteMany({ user: userId }),
     QuizAttempt.deleteMany({ user: userId }),
     ChatHistory.deleteMany({ user: userId }),
+    Session.deleteMany({ user: userId }),
   ]);
   await User.deleteOne({ _id: userId });
 };

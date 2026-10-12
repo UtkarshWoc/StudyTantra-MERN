@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    trim: true,
   },
   email: {
     type: String,
@@ -13,21 +14,52 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
   },
+  // Optional for accounts created with Google sign-in
   password: {
     type: String,
-    required: true,
+  },
+  googleId: {
+    type: String,
+    index: { unique: true, sparse: true },
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationTokenHash: String,
+  emailVerificationExpires: Date,
+  passwordResetTokenHash: String,
+  passwordResetExpires: Date,
+  // Bumped on password change/reset; access tokens carrying an older version are rejected.
+  tokenVersion: {
+    type: Number,
+    default: 0,
   },
 }, {
   timestamps: true,
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
+  if (!this.password || !enteredPassword) return false;
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Fields that are safe to send to the client
+userSchema.methods.toPublicJSON = function () {
+  return {
+    _id: this._id,
+    name: this.name,
+    email: this.email,
+    emailVerified: this.emailVerified,
+    hasPassword: Boolean(this.password),
+    googleLinked: Boolean(this.googleId),
+    createdAt: this.createdAt,
+  };
 };
 
 // Encrypt password using bcrypt before saving
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || !this.password) {
     return;
   }
 

@@ -1,3 +1,5 @@
+import { isProd } from '../config/env.js';
+
 const notFound = (req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
   error.status = 404;
@@ -30,7 +32,6 @@ const errorHandler = (err, req, res, next) => {
     (req.log || console).error({ err }, 'Unhandled error');
   }
 
-  const isProd = process.env.NODE_ENV === 'production';
   // Never leak internal error messages (DB, SDK, stack traces) to clients for 5xx.
   const safeMessage = isServerError && !err.expose ? 'Something went wrong. Please try again.' : message;
 

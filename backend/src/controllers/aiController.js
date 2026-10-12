@@ -1,5 +1,5 @@
 import Document from '../models/Document.js';
-import { generateDocumentSummaryFromPdf } from '../utils/geminiAI.js';
+import { summarize } from '../services/ai/index.js';
 import { readFile } from '../services/storage.js';
 import { findOwned } from '../utils/ownership.js';
 
@@ -9,7 +9,7 @@ import { findOwned } from '../utils/ownership.js';
 export const createSummary = async (req, res) => {
   const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
 
-  const summary = await generateDocumentSummaryFromPdf(await readFile(document));
+  const summary = await summarize({ source: { pdf: await readFile(document) } });
 
   document.summary = summary;
   await document.save();

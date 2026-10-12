@@ -1,18 +1,17 @@
 import Document from '../models/Document.js';
 import Flashcard from '../models/Flashcard.js';
-import { generateFlashcardsFromPdf } from '../utils/geminiAI.js';
+import { generateFlashcards as aiGenerateFlashcards } from '../services/ai/index.js';
 import { readFile } from '../services/storage.js';
 import { findOwned } from '../utils/ownership.js';
-import { LIMITS, clampCount } from '../utils/limits.js';
 
 // @desc    Generate flashcards from document using AI
 // @route   POST /api/flashcards/generate/:docId
 // @access  Private
 export const generateFlashcards = async (req, res) => {
   const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
-  const count = clampCount(req.body?.count, LIMITS.flashcards);
+  const { count } = req.body;
 
-  const generatedCards = await generateFlashcardsFromPdf(await readFile(document), count);
+  const generatedCards = await aiGenerateFlashcards({ source: { pdf: await readFile(document) }, count });
 
   const validCards = (Array.isArray(generatedCards) ? generatedCards : [])
     .filter((card) => card.question && card.answer)

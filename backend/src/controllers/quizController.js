@@ -1,10 +1,9 @@
 import Document from '../models/Document.js';
 import Quiz from '../models/Quiz.js';
 import QuizAttempt from '../models/QuizAttempt.js';
-import { generateQuizFromPdf } from '../utils/geminiAI.js';
+import { generateQuiz as aiGenerateQuiz } from '../services/ai/index.js';
 import { readFile } from '../services/storage.js';
 import { findOwned } from '../utils/ownership.js';
-import { LIMITS, clampCount } from '../utils/limits.js';
 import { isCorrectAnswer } from '../utils/grading.js';
 import { badRequest, HttpError } from '../utils/httpError.js';
 
@@ -29,9 +28,9 @@ const sanitizeQuestions = (questions, count) =>
 // @access  Private
 export const generateQuiz = async (req, res) => {
   const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
-  const count = clampCount(req.body?.count, LIMITS.quizQuestions);
+  const { count } = req.body;
 
-  const questions = sanitizeQuestions(await generateQuizFromPdf(await readFile(document), count), count);
+  const questions = sanitizeQuestions(await aiGenerateQuiz({ source: { pdf: await readFile(document) }, count, types: ['mcq'] }), count);
   if (questions.length === 0) {
     throw new HttpError(502, 'The AI returned an unusable quiz. Please try again.');
   }
@@ -68,13 +67,13 @@ export const getQuizById = async (req, res) => {
 // @access  Private
 export const checkAnswer = async (req, res) => {
   const quiz = await findOwned(Quiz, req.params.id, req.user._id, 'Quiz');
-  const index = Number(req.body?.index);
+  const { index, answer } = req.body;
   const question = quiz.questions[index];
-  if (!Number.isInteger(index) || !question) throw badRequest('Invalid question index');
+  if (!question) throw badRequest('Invalid question index');
 
   res.json({
     index,
-    correct: isCorrectAnswer(question, req.body?.answer),
+    correct: isCorrectAnswer(question, answer),
     correctAnswer: question.correctAnswer,
     explanation: question.explanation,
   });
@@ -85,8 +84,7 @@ export const checkAnswer = async (req, res) => {
 // @access  Private
 export const submitQuiz = async (req, res) => {
   const quiz = await findOwned(Quiz, req.params.id, req.user._id, 'Quiz');
-  const answers = req.body?.answers;
-  if (!Array.isArray(answers)) throw badRequest('answers must be an array');
+  const { answers } = req.body;
 
   const graded = quiz.questions.map((q, index) => ({
     index,
