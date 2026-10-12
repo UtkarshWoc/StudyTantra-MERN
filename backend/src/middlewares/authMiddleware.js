@@ -18,7 +18,7 @@ const protect = async (req, res, next) => {
 
   const [user, session] = await Promise.all([
     User.findById(decoded.userId).select('-password'),
-    decoded.sid ? Session.findById(decoded.sid).select('revokedAt') : null,
+    decoded.sid ? Session.findById(decoded.sid).select('revokedAt createdAt') : null,
   ]);
   if (!user) throw unauthorized('Not authorized, user not found');
 
@@ -30,6 +30,7 @@ const protect = async (req, res, next) => {
 
   req.user = user;
   req.sessionId = session._id;
+  req.sessionCreatedAt = session.createdAt;
   next();
 };
 

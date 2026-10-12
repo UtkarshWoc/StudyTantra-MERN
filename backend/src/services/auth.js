@@ -5,6 +5,8 @@ import { randomToken, hashToken } from '../utils/tokens.js';
 
 export const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// Tabs refreshing at the same moment can present the just-rotated token; allow that briefly.
+const REUSE_GRACE_MS = 30 * 1000;
 export const REFRESH_COOKIE = 'st_rt';
 
 const cookieOptions = {
@@ -45,14 +47,30 @@ export const startSession = async (req, res, user) => {
 
 /**
  * Exchange a refresh token for a new access token, rotating the refresh token.
- * Returns null when the token is unknown, revoked or expired.
+ * Returns null when the token is unknown, revoked or expired. Presenting a token
+ * that was already rotated out (outside a short grace window) means it was
+ * copied, so the whole session is revoked.
  */
 export const rotateSession = async (req, res, refreshToken) => {
   if (!refreshToken) return null;
-  const session = await Session.findOne({ tokenHash: hashToken(refreshToken) }).populate('user');
-  if (!session || session.revokedAt || session.expiresAt < new Date() || !session.user) return null;
+  const presented = hashToken(refreshToken);
+
+  let session = await Session.findOne({ tokenHash: presented }).populate('user');
+  if (!session) {
+    const replayed = await Session.findOne({ previousTokenHash: presented }).populate('user');
+    if (!replayed || replayed.revokedAt) return null;
+    if (Date.now() - (replayed.rotatedAt?.getTime() ?? 0) > REUSE_GRACE_MS) {
+      replayed.revokedAt = new Date();
+      await replayed.save();
+      return null;
+    }
+    session = replayed;
+  }
+  if (session.revokedAt || session.expiresAt < new Date() || !session.user) return null;
 
   const next = randomToken();
+  session.previousTokenHash = session.tokenHash;
+  session.rotatedAt = new Date();
   session.tokenHash = hashToken(next);
   session.lastUsedAt = new Date();
   session.expiresAt = new Date(Date.now() + REFRESH_TTL_MS);

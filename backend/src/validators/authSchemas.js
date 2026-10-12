@@ -30,8 +30,7 @@ export const updateProfileSchema = z.object({
 });
 
 export const changePasswordSchema = z.object({
-  // Optional for Google-only accounts setting a first password
-  currentPassword: z.string().max(128).optional(),
+  currentPassword: z.string().min(1, 'Current password is required').max(128),
   newPassword: password,
 });
 

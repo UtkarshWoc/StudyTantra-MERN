@@ -5,6 +5,9 @@ import mongoose from 'mongoose';
 const sessionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
   tokenHash: { type: String, required: true, unique: true },
+  // Hash of the token this one replaced, kept to detect replay of a rotated-out token
+  previousTokenHash: { type: String, index: true },
+  rotatedAt: { type: Date },
   expiresAt: { type: Date, required: true },
   revokedAt: { type: Date },
   lastUsedAt: { type: Date, default: Date.now },

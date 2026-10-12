@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { startDb, stopDb, clearDb, api, registerUser, auth } from './helpers.js';
 import { testOutbox } from '../src/services/email.js';
+import Session from '../src/models/Session.js';
 
 const tokenFromEmail = (email) => decodeURIComponent(email.text.match(/token=([^\s&]+)/)[1]);
 const refreshCookie = (cookies) => cookies.find((c) => c.startsWith('st_rt='));
@@ -52,7 +53,7 @@ describe('register & login', () => {
 });
 
 describe('sessions', () => {
-  it('refresh rotates the refresh token and the old one stops working', async () => {
+  it('refresh rotates the refresh token and the old one stops working after the grace window', async () => {
     const { cookie } = await registerUser();
     const first = await api().post('/api/auth/refresh').set('Cookie', cookie).expect(200);
     expect(first.body.accessToken).toBeTruthy();
@@ -60,8 +61,8 @@ describe('sessions', () => {
     const rotated = refreshCookie(first.headers['set-cookie']);
     expect(rotated).not.toBe(refreshCookie(cookie));
 
+    await Session.updateMany({}, { rotatedAt: new Date(Date.now() - 60 * 1000) });
     await api().post('/api/auth/refresh').set('Cookie', cookie).expect(401);
-    await api().post('/api/auth/refresh').set('Cookie', rotated).expect(200);
   });
 
   it('logout revokes the session and its access token', async () => {

@@ -29,12 +29,16 @@ export const sendEmail = async ({ to, subject, text, html }) => {
   }
 };
 
+const escapeHtml = (s) =>
+  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// All interpolated values are escaped — user-controlled names must not inject markup/links.
 const layout = (title, body, cta) => `
 <div style="font-family:Inter,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0f172a">
-  <h2 style="margin:0 0 16px">${title}</h2>
-  <p style="line-height:1.6">${body}</p>
-  <p><a href="${cta.url}" style="display:inline-block;background:#f59e0b;color:#0b1120;padding:10px 18px;border-radius:8px;font-weight:700;text-decoration:none">${cta.label}</a></p>
-  <p style="font-size:12px;color:#64748b">If the button doesn't work, open this link: ${cta.url}</p>
+  <h2 style="margin:0 0 16px">${escapeHtml(title)}</h2>
+  <p style="line-height:1.6">${escapeHtml(body)}</p>
+  <p><a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#f59e0b;color:#0b1120;padding:10px 18px;border-radius:8px;font-weight:700;text-decoration:none">${escapeHtml(cta.label)}</a></p>
+  <p style="font-size:12px;color:#64748b">If the button doesn't work, open this link: ${escapeHtml(cta.url)}</p>
 </div>`;
 
 export const sendVerificationEmail = (user, token) => {

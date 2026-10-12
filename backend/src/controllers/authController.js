@@ -17,6 +17,7 @@ import { badRequest, conflict, unauthorized, HttpError } from '../utils/httpErro
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
+const RECENT_LOGIN_MS = 15 * 60 * 1000;
 
 const issueVerification = async (user) => {
   const token = randomToken();
@@ -75,7 +76,16 @@ export const googleAuth = async (req, res) => {
   let user = await User.findOne({ googleId: payload.sub }) || await User.findOne({ email });
 
   if (user) {
-    // Google has verified ownership of this email, so linking is safe.
+    if (!user.emailVerified) {
+      // Whoever created this account never proved they own the address, but
+      // Google just did. Drop their password and sessions so a pre-registered
+      // ("pre-hijacked") account can't be used to spy on the real owner.
+      user.password = undefined;
+      user.tokenVersion += 1;
+      user.passwordResetTokenHash = undefined;
+      user.passwordResetExpires = undefined;
+      await revokeAllSessions(user._id);
+    }
     user.googleId ??= payload.sub;
     user.emailVerified = true;
     await user.save();
@@ -205,6 +215,9 @@ export const updateUserProfile = async (req, res) => {
     }
     user.email = email;
     user.emailVerified = false;
+    // Reset links sent to the old address must stop working
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetExpires = undefined;
     await issueVerification(user);
   }
 
@@ -212,19 +225,26 @@ export const updateUserProfile = async (req, res) => {
   res.json({ user: user.toPublicJSON() });
 };
 
-// @desc    Change (or, for Google-only accounts, set) the password. Signs out other devices.
+// @desc    Change the password. Signs out other devices.
+//          Google-only accounts set their first password via the emailed reset link,
+//          so a stolen access token alone can never add a password login.
 // @route   PUT /api/auth/password
 // @access  Private
 export const changePassword = async (req, res) => {
   const user = await User.findById(req.user._id);
   const { currentPassword, newPassword } = req.body;
 
-  if (user.password && !(await user.matchPassword(currentPassword))) {
+  if (!user.password) {
+    throw badRequest('Your account uses Google sign-in. Use "Forgot password" to set a password.');
+  }
+  if (!(await user.matchPassword(currentPassword))) {
     throw badRequest('Current password is incorrect');
   }
 
   user.password = newPassword;
   user.tokenVersion += 1;
+  user.passwordResetTokenHash = undefined;
+  user.passwordResetExpires = undefined;
   await user.save();
   await revokeAllSessions(user._id, { except: req.sessionId });
 
@@ -238,9 +258,11 @@ export const changePassword = async (req, res) => {
 export const deleteAccount = async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  // Password-less (Google-only) accounts confirm with the typed "DELETE" alone.
-  if (user.password && !(await user.matchPassword(req.body.password))) {
-    throw badRequest('Password is incorrect');
+  if (user.password) {
+    if (!(await user.matchPassword(req.body.password))) throw badRequest('Password is incorrect');
+  } else if (Date.now() - req.sessionCreatedAt.getTime() > RECENT_LOGIN_MS) {
+    // Password-less (Google-only) accounts prove presence with a fresh sign-in instead.
+    throw new HttpError(403, 'Please sign out and sign in again with Google, then delete your account.');
   }
 
   await deleteUserCascade(user._id);
