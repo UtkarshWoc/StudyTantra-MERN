@@ -16,7 +16,9 @@ export const AuthProvider = ({ children }) => {
     const id = axios.interceptors.response.use(
       r => r,
       err => {
-        if (err.response?.status === 401) {
+        // A 401 from login/register just means bad credentials — let the form show it.
+        const isAuthAttempt = /\/api\/auth\/(login|register)$/.test(err.config?.url || '');
+        if (err.response?.status === 401 && !isAuthAttempt) {
           setUser(null);
           localStorage.removeItem('userInfo');
           window.location.href = '/login';
@@ -35,7 +37,9 @@ export const AuthProvider = ({ children }) => {
         const parsed = JSON.parse(storedUserInfo);
         if (parsed.token && typeof parsed.token === 'string') {
           try {
-            const payload = JSON.parse(Buffer.from(parsed.token.split('.')[1], 'base64').toString());
+            // JWT payloads are base64url; atob needs standard base64 (Buffer doesn't exist in browsers)
+            const b64 = parsed.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(atob(b64));
             if (payload.exp && payload.exp * 1000 < Date.now()) {
               localStorage.removeItem('userInfo');
               setUser(null);
@@ -92,7 +96,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Update profile
-  const updateProfile = async (name, email) => {
+  const updateProfile = async (name, email, currentPassword) => {
     if (!user || (!name && !email)) return { success: false, error: 'Nothing to update' };
 
     try {
@@ -103,7 +107,7 @@ export const AuthProvider = ({ children }) => {
         },
       };
 
-      const { data } = await axios.put(`${API_URL}/profile`, { name, email }, config);
+      const { data } = await axios.put(`${API_URL}/profile`, { name, email, currentPassword }, config);
       setUser(data);
       localStorage.setItem('userInfo', JSON.stringify(data));
       return { success: true, data };

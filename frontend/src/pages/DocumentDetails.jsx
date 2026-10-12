@@ -13,6 +13,8 @@ const DocumentDetails = () => {
 
   const [document, setDocument] = useState(location.state?.document || null);
   const [loading, setLoading] = useState(!document);
+  const [fileUrl, setFileUrl] = useState(null);
+  const [fileError, setFileError] = useState('');
 
   useEffect(() => {
     if (!document && user) {
@@ -31,10 +33,27 @@ const DocumentDetails = () => {
     }
   }, [id, document, user]);
 
-  // Build Google Docs Viewer URL for cross-origin PDF rendering
-  const getViewerUrl = (pdfUrl) => {
-    return `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-  };
+  // PDFs are private: fetch through the authenticated API and show a local blob URL.
+  useEffect(() => {
+    if (!user || !id) return;
+    let objectUrl;
+    let cancelled = false;
+    setFileError('');
+    axios.get(`${import.meta.env.VITE_API_URL}/api/documents/${id}/file`, {
+      headers: { Authorization: `Bearer ${user.token}` },
+      responseType: 'blob',
+    })
+      .then(({ data }) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+        setFileUrl(objectUrl);
+      })
+      .catch(() => { if (!cancelled) setFileError('Could not load the PDF.'); });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [id, user]);
 
   return (
     <div className="flex gap-4 h-full p-4 lg:p-6 w-full max-h-screen">
@@ -48,9 +67,9 @@ const DocumentDetails = () => {
             <ArrowLeft size={16} className="mr-1" />
             Back to Library
           </button>
-          {document?.filePath && (
+          {fileUrl && (
             <a
-              href={document.filePath}
+              href={fileUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors gap-1"
@@ -62,14 +81,14 @@ const DocumentDetails = () => {
         </div>
 
         <div className="flex-1 bg-gray-50 dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center overflow-hidden relative transition-colors">
-          {loading ? (
+          {loading || (!fileUrl && !fileError) ? (
             <div className="flex flex-col items-center text-gray-400">
               <Loader2 className="animate-spin mb-2" size={32} />
               <p>Loading document...</p>
             </div>
-          ) : document?.filePath ? (
+          ) : fileUrl ? (
             <iframe
-              src={getViewerUrl(document.filePath)}
+              src={fileUrl}
               className="w-full h-full absolute inset-0 rounded-xl border-0"
               title={document.title}
               allow="autoplay"
@@ -77,7 +96,7 @@ const DocumentDetails = () => {
           ) : (
             <div className="text-gray-400 text-center">
               <FileText size={64} className="mb-4 opacity-50 mx-auto" />
-              <p className="font-bold text-gray-500">Document Not Found</p>
+              <p className="font-bold text-gray-500">{fileError || 'Document Not Found'}</p>
             </div>
           )}
         </div>

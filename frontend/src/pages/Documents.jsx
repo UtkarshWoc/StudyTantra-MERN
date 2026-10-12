@@ -2,9 +2,15 @@ import React, { useState, useEffect } from 'react';
 import DocumentCard from '../components/DocumentCard';
 import UploadModal from '../components/UploadModal';
 import { UploadCloud, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+
+const formatBytes = (bytes) => {
+  if (!bytes) return 'PDF';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const Documents = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,6 +18,9 @@ const Documents = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = (searchParams.get('q') || '').trim().toLowerCase();
+  const visibleDocuments = query ? documents.filter(d => d.title.toLowerCase().includes(query)) : documents;
 
   const fetchDocuments = async () => {
     if (!user) return;
@@ -35,7 +44,14 @@ const Documents = () => {
 
       {loading ? (<div className="flex flex-col items-center py-20 text-slate-500"><Loader2 className="animate-spin mb-4 text-amber-500" size={36} /><p className="font-medium">Loading library...</p></div>) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {documents.map(doc => (<div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1"><DocumentCard title={doc.title} size="PDF" date={new Date(doc.createdAt).toLocaleDateString()} isFavorited={doc.isFavorited} onFavoriteToggle={() => handleToggleFavorite(doc._id, doc.isFavorited)} onDelete={() => handleDelete(doc._id)} /></div>))}
+          {visibleDocuments.map(doc => (<div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1"><DocumentCard title={doc.title} size={formatBytes(doc.sizeBytes)} date={new Date(doc.createdAt).toLocaleDateString()} isFavorited={doc.isFavorited} onFavoriteToggle={() => handleToggleFavorite(doc._id, doc.isFavorited)} onDelete={() => handleDelete(doc._id)} /></div>))}
+        </div>
+      )}
+
+      {!loading && query && (
+        <div className="flex items-center justify-between text-sm text-slate-400">
+          <span>{visibleDocuments.length} result{visibleDocuments.length === 1 ? '' : 's'} for "{searchParams.get('q')}"</span>
+          <button onClick={() => setSearchParams({})} className="text-amber-400 font-semibold hover:text-amber-300 cursor-pointer">Clear search</button>
         </div>
       )}
 

@@ -9,15 +9,22 @@ const QuizEngine = ({ quiz }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false); // Current question submitted
+  const [checking, setChecking] = useState(false);
 
   // Array of user answers (the string they selected)
   const [userAnswers, setUserAnswers] = useState([]);
+  // Server feedback per question: { correct, correctAnswer, explanation }
+  const [checks, setChecks] = useState([]);
+  // Questions including the answer key — only available from the server after an attempt
+  const [reviewQuestions, setReviewQuestions] = useState(null);
 
   const [score, setScore] = useState(quiz?.score || 0);
   const [showResults, setShowResults] = useState(quiz?.attempted || false);
   const [submittingToServer, setSubmittingToServer] = useState(false);
+  const [error, setError] = useState('');
 
   const quizData = quiz?.questions || [];
+  const authHeaders = { headers: { Authorization: `Bearer ${user?.token}` } };
 
   // Reset engine when quiz changes
   useEffect(() => {
@@ -26,9 +33,31 @@ const QuizEngine = ({ quiz }) => {
     setSelectedOption(null);
     setIsSubmitted(false);
     setUserAnswers([]);
+    setChecks([]);
+    setReviewQuestions(null);
+    setError('');
     setScore(quiz?.score || 0);
     setShowResults(quiz?.attempted || false);
   }, [quiz]);
+
+  // For a previously attempted quiz, load the answer key + latest attempt for review
+  useEffect(() => {
+    if (!quiz?._id || !quiz.attempted || !user) return;
+    let cancelled = false;
+    axios.get(`${import.meta.env.VITE_API_URL}/api/quizzes/${quiz._id}/attempts`, authHeaders)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setReviewQuestions(data.quiz?.questions || null);
+        const latest = data.attempts?.[0];
+        if (latest) {
+          setUserAnswers(latest.answers.map(a => a.answer));
+          setScore(latest.score);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quiz?._id, quiz?.attempted, user]);
 
   if (quizData.length === 0) {
     return (
@@ -46,20 +75,42 @@ const QuizEngine = ({ quiz }) => {
     if (!isSubmitted) setSelectedOption(option);
   };
 
-  const handleSubmit = () => {
-    if (!selectedOption) return;
+  const handleSubmit = async () => {
+    if (!selectedOption || checking) return;
+    setChecking(true);
+    setError('');
+    try {
+      // The answer key never reaches the client before answering; ask the server.
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/quizzes/${quiz._id}/check`,
+        { index: currentQuestion, answer: selectedOption }, authHeaders);
 
-    setIsSubmitted(true);
+      const newAnswers = [...userAnswers];
+      newAnswers[currentQuestion] = selectedOption;
+      setUserAnswers(newAnswers);
 
-    // Save their answer
-    const newAnswers = [...userAnswers];
-    newAnswers[currentQuestion] = selectedOption;
-    setUserAnswers(newAnswers);
+      const newChecks = [...checks];
+      newChecks[currentQuestion] = data;
+      setChecks(newChecks);
 
-    // AI returns 'correctAnswer' as string. So check equality.
-    if (selectedOption === quizData[currentQuestion].correctAnswer) {
-      setScore(score + 1);
+      if (data.correct) setScore(prev => prev + 1);
+      setIsSubmitted(true);
+    } catch {
+      setError('Could not check your answer. Please try again.');
+    } finally {
+      setChecking(false);
     }
+  };
+
+  const handleRetake = () => {
+    setStarted(true);
+    setShowResults(false);
+    setCurrentQuestion(0);
+    setSelectedOption(null);
+    setIsSubmitted(false);
+    setUserAnswers([]);
+    setChecks([]);
+    setScore(0);
+    setError('');
   };
 
   const handleNext = async () => {
@@ -68,15 +119,16 @@ const QuizEngine = ({ quiz }) => {
       setSelectedOption(null);
       setIsSubmitted(false);
     } else {
-      // Quiz finished, submit to backend
+      // Quiz finished: the server grades and records the attempt
       setSubmittingToServer(true);
       try {
-        await axios.post(`${import.meta.env.VITE_API_URL}/api/quizzes/${quiz._id}/submit`,
-          { answers: userAnswers },
-          { headers: { Authorization: `Bearer ${user.token}` } }
-        );
+        const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/quizzes/${quiz._id}/submit`,
+          { answers: userAnswers }, authHeaders);
+        setScore(data.score);
+        setReviewQuestions(data.quiz?.questions || null);
       } catch (err) {
         console.error("Failed to save quiz results", err);
+        setError('Your results could not be saved.');
       } finally {
         setSubmittingToServer(false);
         setShowResults(true);
@@ -134,6 +186,13 @@ const QuizEngine = ({ quiz }) => {
             {percentage >= 70 ? 'Great job!' : 'Keep practicing!'}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-8 font-medium">You scored {score} out of {total} correct.</p>
+          {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+          <button
+            onClick={handleRetake}
+            className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-indigo-700 transition-all cursor-pointer"
+          >
+            <RefreshCcw size={18} /> Retake Quiz
+          </button>
         </div>
 
         {/* Answer Review List */}
@@ -141,11 +200,12 @@ const QuizEngine = ({ quiz }) => {
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Quiz Review</h3>
 
           <div className="space-y-8">
-            {quizData.map((q, idx) => {
+            {!reviewQuestions && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Loading answers...</p>
+            )}
+            {(reviewQuestions || []).map((q, idx) => {
               const userAnswer = userAnswers[idx];
-              const isCorrect = userAnswer === q.correctAnswer;
-              // If userAnswers is empty (because they are just viewing a past quiz), we don't have their specific answers.
-              // So we just show the correct answer and explanation.
+              // userAnswers comes from this session or the latest stored attempt.
               const hasUserAnswers = userAnswers.length > 0;
 
               return (
@@ -191,6 +251,7 @@ const QuizEngine = ({ quiz }) => {
 
   // --- ACTIVE QUIZ VIEW ---
   const currentQ = quizData[currentQuestion];
+  const currentCheck = checks[currentQuestion];
 
   return (
     <div className="max-w-3xl mx-auto w-full">
@@ -218,7 +279,7 @@ const QuizEngine = ({ quiz }) => {
         <div className="p-6 md:p-8 space-y-3 bg-gray-50/30 dark:bg-gray-900/30">
           {currentQ.options.map((option, idx) => {
             const isSelected = selectedOption === option;
-            const isCorrect = option === currentQ.correctAnswer;
+            const isCorrect = option === currentCheck?.correctAnswer;
 
             let btnClasses = "w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center cursor-pointer ";
 
@@ -255,12 +316,12 @@ const QuizEngine = ({ quiz }) => {
         {/* Action Area & Explanation */}
         {isSubmitted && (
           <div className="p-6 md:p-8 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 animate-in slide-in-from-bottom-2 duration-300 flex flex-col md:flex-row items-start justify-between gap-6">
-            <div className={`flex-1 p-5 rounded-2xl ${selectedOption === currentQ.correctAnswer ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50'}`}>
-              <h4 className={`font-bold mb-2 flex items-center ${selectedOption === currentQ.correctAnswer ? 'text-emerald-800 dark:text-emerald-400' : 'text-red-800 dark:text-red-400'}`}>
-                {selectedOption === currentQ.correctAnswer ? 'Correct!' : 'Incorrect'}
+            <div className={`flex-1 p-5 rounded-2xl ${currentCheck?.correct ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50'}`}>
+              <h4 className={`font-bold mb-2 flex items-center ${currentCheck?.correct ? 'text-emerald-800 dark:text-emerald-400' : 'text-red-800 dark:text-red-400'}`}>
+                {currentCheck?.correct ? 'Correct!' : 'Incorrect'}
               </h4>
-              <p className={`text-sm leading-relaxed ${selectedOption === currentQ.correctAnswer ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
-                {currentQ.explanation}
+              <p className={`text-sm leading-relaxed ${currentCheck?.correct ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
+                {currentCheck?.explanation}
               </p>
             </div>
             <button
@@ -275,13 +336,14 @@ const QuizEngine = ({ quiz }) => {
         )}
 
         {!isSubmitted && (
-          <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-end">
+          <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-end gap-4">
+            {error && <p className="text-sm text-red-500">{error}</p>}
             <button
               onClick={handleSubmit}
-              disabled={selectedOption === null}
+              disabled={selectedOption === null || checking}
               className="w-full md:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-indigo-700 hover:shadow-lg transition-all shadow-md disabled:opacity-50 disabled:hover:shadow-md disabled:cursor-not-allowed cursor-pointer"
             >
-              Submit Answer
+              {checking ? 'Checking...' : 'Submit Answer'}
             </button>
           </div>
         )}
