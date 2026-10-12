@@ -46,7 +46,19 @@ const documentSchema = new mongoose.Schema({
   },
   summary: {
     type: String, // AI Generated summary
-  }
+  },
+  // Ingestion state (services/ingestion): text extraction, OCR, chunking, embeddings
+  status: {
+    type: String,
+    enum: ['processing', 'ready', 'failed'],
+    default: 'processing',
+  },
+  progress: { type: Number, default: 0 },
+  processingError: { type: String },
+  ocr: { type: Boolean, default: false },
+  textChars: { type: Number },
+  chunkCount: { type: Number },
+  processedAt: { type: Date },
 }, {
   timestamps: true,
   toJSON: {

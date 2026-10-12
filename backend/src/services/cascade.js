@@ -5,6 +5,8 @@ import QuizAttempt from '../models/QuizAttempt.js';
 import ChatHistory from '../models/ChatHistory.js';
 import User from '../models/User.js';
 import Session from '../models/Session.js';
+import Chunk from '../models/Chunk.js';
+import DocumentPage from '../models/DocumentPage.js';
 import { deleteFile } from './storage.js';
 
 // Everything that hangs off a document. Keep this list in sync when adding
@@ -16,6 +18,8 @@ export const deleteDocumentCascade = async (doc) => {
     Quiz.deleteMany({ document: doc._id }),
     QuizAttempt.deleteMany({ document: doc._id }),
     ChatHistory.deleteMany({ document: doc._id }),
+    Chunk.deleteMany({ document: doc._id }),
+    DocumentPage.deleteMany({ document: doc._id }),
   ]);
   await doc.deleteOne();
 };

@@ -26,6 +26,8 @@ const { default: connectDB } = await import('../src/config/db.js');
 const { env } = await import('../src/config/env.js');
 
 await connectDB();
+const { resumePendingIngestion } = await import('../src/services/ingestion/queue.js');
+await resumePendingIngestion();
 const server = app.listen(env.PORT, () => console.log(`E2E API listening on http://localhost:${env.PORT}`));
 
 const shutdown = async () => {

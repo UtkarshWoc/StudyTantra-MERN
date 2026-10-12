@@ -122,16 +122,77 @@ export const gradeAnswers = (items) =>
 
 export const embedTexts = (texts, options) => provider.embed(texts, options);
 
-export { BASE_SYSTEM, sourceParts };
+// ---- Retrieval-augmented chat ----
 
 /**
- * Answer a chat message grounded in `context` text. history: [{ role, content }]
+ * Format retrieved chunks as numbered sources the model can cite.
+ * sources: [{ page, pageEnd, title?, text }]
  */
-export const chatReply = ({ context, history = [], message }) =>
+const formatSources = (sources) =>
+  sources
+    .map((s) => {
+      const pages = s.pageEnd && s.pageEnd !== s.page ? `${s.page}-${s.pageEnd}` : `${s.page}`;
+      return `[p. ${pages}]${s.title ? ` (${s.title})` : ''}\n${s.text}`;
+    })
+    .join('\n\n---\n\n');
+
+const chatSystem = (sources) => `${BASE_SYSTEM}
+Answer the student's question using ONLY the excerpts below. Use Markdown.
+Cite the page for every claim using the exact tag shown before each excerpt, e.g. [p. 12] or [p. 3-4].
+If the excerpts do not contain the answer, say you couldn't find it in the document and suggest what to search for instead.
+
+${sources.length ? `Excerpts:\n${formatSources(sources)}` : 'No excerpts were found for this question.'}`;
+
+/**
+ * Stream an answer grounded in retrieved `sources`. Yields text chunks.
+ */
+export const chatStream = ({ sources, history = [], message }) =>
+  provider.streamText({ system: chatSystem(sources), history, parts: [{ text: message }] });
+
+export const chatReply = ({ sources, history = [], message }) =>
+  provider.generateText({ system: chatSystem(sources), history, parts: [{ text: message }] });
+
+/**
+ * Explain a passage the student highlighted, using nearby document context.
+ */
+export const explainSelection = ({ selection, sources, mode = 'explain' }) =>
   provider.generateText({
-    system: `${BASE_SYSTEM}\nAnswer the student's questions using the study material below. Use Markdown.\n\n${
-      context ? `Study material:\n---\n${context.slice(0, MAX_CONTEXT_CHARS)}\n---` : 'No text could be extracted from this document (it may be scanned). Say so if you cannot answer.'
-    }`,
-    history,
-    parts: [{ text: message }],
+    system: `${BASE_SYSTEM}\nUse Markdown. Keep it under 200 words.`,
+    parts: [{
+      text: `${sources.length ? `Context from the document:\n${formatSources(sources)}\n\n` : ''}${
+        mode === 'simplify'
+          ? 'Rewrite this passage in simple words a beginner would understand, with a small example:'
+          : 'Explain this passage clearly: what it means, why it matters, and one example:'
+      }\n"""${selection}"""`,
+    }],
   });
+
+// ---- OCR for scanned PDFs ----
+
+const ocrSchema = {
+  type: 'object',
+  properties: {
+    pages: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { page: { type: 'integer' }, text: { type: 'string' } },
+        required: ['page', 'text'],
+      },
+    },
+  },
+  required: ['pages'],
+};
+
+/**
+ * Transcribe a scanned PDF page by page. Returns [{ page, text }].
+ */
+export const ocrPdf = async ({ pdf }) => {
+  const result = await provider.generateJSON({
+    system: 'You transcribe documents accurately. Preserve headings and lists as plain text. Do not summarize.',
+    schema: ocrSchema,
+    parts: [...sourceParts({ pdf }), { text: 'Transcribe the full text of every page of this PDF. Use 1-based page numbers.' }],
+    mock: { kind: 'ocr' },
+  });
+  return Array.isArray(result?.pages) ? result.pages : [];
+};

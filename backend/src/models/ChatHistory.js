@@ -9,7 +9,14 @@ const messageSchema = new mongoose.Schema({
   content: {
     type: String,
     required: true,
-  }
+  },
+  // Pages the answer was grounded in (model messages only)
+  citations: [{
+    _id: false,
+    page: Number,
+    pageEnd: Number,
+    snippet: String,
+  }],
 });
 
 const chatHistorySchema = new mongoose.Schema({

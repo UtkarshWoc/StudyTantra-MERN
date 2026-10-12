@@ -20,6 +20,8 @@ const schema = z.object({
   GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
   GEMINI_EMBED_MODEL: z.string().default('gemini-embedding-001'),
   AI_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(60),
+  // app: score embeddings in Node (default). atlas: MongoDB Atlas Vector Search index "chunk_embeddings"
+  VECTOR_SEARCH: z.enum(['app', 'atlas']).default('app'),
 
   STORAGE_DRIVER: z.enum(['cloudinary', 'local']).default('cloudinary'),
   LOCAL_UPLOAD_DIR: z.string().default('uploads'),

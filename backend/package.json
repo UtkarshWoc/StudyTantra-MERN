@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "npm install",
-    "test:local": "npm ci && npm start"
+    "test:local": "npm ci && npm start",
+    "smoke:gemini": "node scripts/gemini-smoke.js"
   },
   "keywords": [],
   "author": "",

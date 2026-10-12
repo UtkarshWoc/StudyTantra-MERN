@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const questionSchema = new mongoose.Schema({
+  type: { type: String, enum: ['mcq', 'true_false', 'fill_blank', 'short_answer'], default: 'mcq' },
   question: { type: String, required: true },
   options: [{ type: String, required: true }],
   correctAnswer: { type: String, required: true },
@@ -20,6 +21,9 @@ const quizSchema = new mongoose.Schema({
     ref: 'Document',
   },
   questions: [questionSchema],
+  // How the quiz was generated, shown in the UI
+  scope: { type: String },
+  difficulty: { type: String },
   score: {
     type: Number,
     default: 0

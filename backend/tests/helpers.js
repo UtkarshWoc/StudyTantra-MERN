@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../src/app.js';
+import { whenIdle } from '../src/services/ingestion/queue.js';
 
 let mongod;
 
@@ -66,3 +67,15 @@ export const uploadPdf = (token, { title = 'Biology Notes', pdf = samplePdf() } 
     .set(auth(token))
     .field('title', title)
     .attach('document', pdf, { filename: 'notes.pdf', contentType: 'application/pdf' });
+
+/**
+ * Upload a PDF and wait for background ingestion to finish. Returns the document.
+ */
+export const uploadReady = async (token, options) => {
+  const res = await uploadPdf(token, options).expect(201);
+  await whenIdle();
+  return (await api().get(`/api/documents/${res.body._id}`).set(auth(token)).expect(200)).body;
+};
+
+// A PDF whose single page has no text layer (like a scan)
+export const scannedPdf = () => samplePdf('');

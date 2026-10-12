@@ -3,6 +3,7 @@ import app from "./app.js";
 import connectDB from "./config/db.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
+import { resumePendingIngestion } from "./services/ingestion/queue.js";
 
 // After an uncaught exception the process is in an unknown state: log and exit
 // so the platform (Railway) restarts a clean instance.
@@ -20,7 +21,9 @@ app.listen(env.PORT, '0.0.0.0', () => {
   logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
 
   // Connect to MongoDB after the server is already listening
-  connectDB().catch((err) => {
-    logger.error({ err: err.message }, 'MongoDB connection failed (server still running)');
-  });
+  connectDB()
+    .then(() => resumePendingIngestion())
+    .catch((err) => {
+      logger.error({ err: err.message }, 'MongoDB connection failed (server still running)');
+    });
 });

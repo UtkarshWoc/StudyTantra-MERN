@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { startDb, stopDb, clearDb, api, registerUser, auth, uploadPdf } from './helpers.js';
+import { startDb, stopDb, clearDb, api, registerUser, auth, uploadPdf, uploadReady } from './helpers.js';
 
 beforeAll(startDb);
 afterAll(stopDb);
@@ -7,7 +7,7 @@ beforeEach(clearDb);
 
 const setup = async () => {
   const user = await registerUser();
-  const { body: doc } = await uploadPdf(user.token).expect(201);
+  const doc = await uploadReady(user.token);
   return { ...user, doc };
 };
 

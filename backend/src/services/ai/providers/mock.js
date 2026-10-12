@@ -56,9 +56,12 @@ const fixtures = {
 export const mockProvider = {
   name: 'mock',
 
-  async generateText({ parts }) {
-    const text = partsText(parts);
-    return `Mock response. ${text.includes('[p.') ? 'See [p. 1].' : ''}`.trim();
+  async generateText({ system = '', parts }) {
+    // Cite the first page tag found in the provided excerpts, like the real model is told to
+    const material = `${system}\n${partsText(parts)}`;
+    const excerpts = material.includes('Excerpts:') ? material.slice(material.indexOf('Excerpts:')) : material;
+    const tag = excerpts.match(/\[p\. [0-9-]+\]/)?.[0];
+    return tag ? `Mock response based on the document ${tag}.` : 'Mock response. I could not find that in the document.';
   },
 
   async *streamText(args) {

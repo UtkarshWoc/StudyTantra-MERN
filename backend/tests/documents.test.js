@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { startDb, stopDb, clearDb, api, registerUser, auth, uploadPdf } from './helpers.js';
+import { startDb, stopDb, clearDb, api, registerUser, auth, uploadPdf, uploadReady } from './helpers.js';
 import Flashcard from '../src/models/Flashcard.js';
 import Quiz from '../src/models/Quiz.js';
 import ChatHistory from '../src/models/ChatHistory.js';
@@ -45,7 +45,7 @@ describe('documents', () => {
 
   it('deleting a document removes everything generated from it', async () => {
     const { token } = await registerUser();
-    const { body: doc } = await uploadPdf(token).expect(201);
+    const doc = await uploadReady(token);
 
     await api().post(`/api/flashcards/generate/${doc._id}`).set(auth(token)).send({ count: 3 }).expect(201);
     await api().post(`/api/quizzes/generate/${doc._id}`).set(auth(token)).send({ count: 3 }).expect(201);
@@ -63,7 +63,7 @@ describe('documents', () => {
 describe('dashboard', () => {
   it('aggregates counts and average quiz score', async () => {
     const { token } = await registerUser();
-    const { body: doc } = await uploadPdf(token).expect(201);
+    const doc = await uploadReady(token);
     const { body: { quiz } } = await api().post(`/api/quizzes/generate/${doc._id}`).set(auth(token)).send({ count: 4 }).expect(201);
     // Mock quizzes: correct answer is always "A" for mcq
     await api().post(`/api/quizzes/${quiz._id}/submit`).set(auth(token)).send({ answers: ['A', 'A', 'B', 'B'] }).expect(200);

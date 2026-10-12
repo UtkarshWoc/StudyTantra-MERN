@@ -1,8 +1,9 @@
 import Document from '../models/Document.js';
 import { saveFile, readFile } from '../services/storage.js';
 import { deleteDocumentCascade } from '../services/cascade.js';
+import { enqueueIngestion } from '../services/ingestion/queue.js';
 import { findOwned } from '../utils/ownership.js';
-import { badRequest } from '../utils/httpError.js';
+import { badRequest, conflict } from '../utils/httpError.js';
 
 const isPdf = (buffer) => buffer?.subarray(0, 5).toString('latin1') === '%PDF-';
 
@@ -24,8 +25,11 @@ export const uploadDocument = async (req, res) => {
     filename: req.file.originalname,
     ...stored,
     sizeBytes: req.file.size || req.file.buffer.length,
+    status: 'processing',
   });
 
+  // Text extraction, OCR and embeddings run in the background; the client polls status.
+  enqueueIngestion(document._id);
   res.status(201).json(document);
 };
 
@@ -58,6 +62,20 @@ export const getDocumentFile = async (req, res) => {
     'Cache-Control': 'private, max-age=300',
   });
   res.send(buffer);
+};
+
+// @desc    Re-run ingestion (e.g. after a failure)
+// @route   POST /api/documents/:id/reprocess
+// @access  Private
+export const reprocessDocument = async (req, res) => {
+  const document = await findOwned(Document, req.params.id, req.user._id, 'Document');
+  if (document.status === 'processing') throw conflict('This document is already being processed');
+  document.status = 'processing';
+  document.progress = 0;
+  document.processingError = undefined;
+  await document.save();
+  enqueueIngestion(document._id);
+  res.status(202).json(document);
 };
 
 // @desc    Delete a document and everything generated from it

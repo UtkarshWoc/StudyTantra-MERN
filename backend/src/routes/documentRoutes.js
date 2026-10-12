@@ -6,6 +6,7 @@ import {
   deleteDocument,
   toggleFavorite,
   getDocumentFile,
+  reprocessDocument,
 } from '../controllers/documentController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import upload from '../middlewares/uploadMiddleware.js';
@@ -23,6 +24,7 @@ router.route('/:id')
   .delete(protect, deleteDocument);
 
 router.get('/:id/file', protect, getDocumentFile);
+router.post('/:id/reprocess', protect, reprocessDocument);
 router.put('/:id/favorite', protect, toggleFavorite);
 
 export default router;
