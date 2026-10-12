@@ -1,5 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import { deleteUserCascade } from '../services/cascade.js';
+import { badRequest, conflict, unauthorized } from '../utils/httpError.js';
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -7,92 +9,88 @@ const generateToken = (userId) => {
   });
 };
 
+const authResponse = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  token: generateToken(user._id),
+});
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
-export const registerUser = async (req, res, next) => {
-  try {
-    const { name, email, password } = req.body;
+export const registerUser = async (req, res) => {
+  const { name, email, password } = req.body;
 
-    const userExists = await User.findOne({ email });
+  if (await User.exists({ email })) throw conflict('An account with this email already exists');
 
-    if (userExists) {
-      res.status(400);
-      throw new Error('User already exists');
-    }
-
-    const user = await User.create({
-      name,
-      email,
-      password,
-    });
-
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(400);
-      throw new Error('Invalid user data');
-    }
-  } catch (err) {
-    next(err);
-  }
+  const user = await User.create({ name, email, password });
+  res.status(201).json(authResponse(user));
 };
 
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
 // @access  Public
-export const loginUser = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
+export const loginUser = async (req, res) => {
+  const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
-
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(401);
-      throw new Error('Invalid email or password');
-    }
-  } catch (err) {
-    next(err);
+  const user = await User.findOne({ email });
+  if (!user || !(await user.matchPassword(password))) {
+    throw unauthorized('Invalid email or password');
   }
+
+  res.json(authResponse(user));
 };
 
-// @desc    Update user profile
+// @desc    Update user profile (name, email). Changing email requires the current password.
 // @route   PUT /api/auth/profile
 // @access  Private
-export const updateUserProfile = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id);
+export const updateUserProfile = async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const { name, email, currentPassword } = req.body;
 
-    if (user) {
-      user.name = req.body.name || user.name;
-      if (req.body.email) user.email = req.body.email;
-      if (req.body.password) user.password = req.body.password;
+  if (name) user.name = name;
 
-      const updatedUser = await user.save();
-
-      res.json({
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        token: generateToken(updatedUser._id),
-      });
-    } else {
-      res.status(404);
-      throw new Error('User not found');
+  if (email && email !== user.email) {
+    if (!currentPassword || !(await user.matchPassword(currentPassword))) {
+      throw badRequest('Enter your current password to change your email');
     }
-  } catch (err) {
-    next(err);
+    if (await User.exists({ email, _id: { $ne: user._id } })) {
+      throw conflict('An account with this email already exists');
+    }
+    user.email = email;
   }
+
+  await user.save();
+  res.json(authResponse(user));
+};
+
+// @desc    Change password
+// @route   PUT /api/auth/password
+// @access  Private
+export const changePassword = async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const { currentPassword, newPassword } = req.body;
+
+  if (!(await user.matchPassword(currentPassword))) {
+    throw badRequest('Current password is incorrect');
+  }
+
+  user.password = newPassword;
+  await user.save();
+  res.json({ message: 'Password updated' });
+};
+
+// @desc    Permanently delete the account and all of its data
+// @route   DELETE /api/auth/account
+// @access  Private
+export const deleteAccount = async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (!req.body.password || !(await user.matchPassword(req.body.password))) {
+    throw badRequest('Password is incorrect');
+  }
+
+  await deleteUserCascade(user._id);
+  res.json({ message: 'Account deleted' });
 };

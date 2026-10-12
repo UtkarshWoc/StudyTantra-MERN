@@ -4,7 +4,8 @@ const questionSchema = new mongoose.Schema({
   question: { type: String, required: true },
   options: [{ type: String, required: true }],
   correctAnswer: { type: String, required: true },
-  explanation: { type: String }
+  explanation: { type: String },
+  topic: { type: String, default: 'General' },
 });
 
 const quizSchema = new mongoose.Schema({
@@ -30,10 +31,27 @@ const quizSchema = new mongoose.Schema({
   attempted: {
     type: Boolean,
     default: false
+  },
+  attemptsCount: {
+    type: Number,
+    default: 0
+  },
+  bestScore: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true,
 });
+
+quizSchema.index({ user: 1, document: 1, createdAt: -1 });
+
+// Strip answers/explanations so a quiz can be taken without the client knowing the key.
+quizSchema.methods.toPublicJSON = function () {
+  const obj = this.toJSON();
+  obj.questions = obj.questions.map(({ correctAnswer, explanation, ...q }) => q);
+  return obj;
+};
 
 const Quiz = mongoose.model('Quiz', quizSchema);
 export default Quiz;

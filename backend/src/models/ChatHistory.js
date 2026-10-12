@@ -28,5 +28,7 @@ const chatHistorySchema = new mongoose.Schema({
   timestamps: true,
 });
 
+chatHistorySchema.index({ user: 1, document: 1 });
+
 const ChatHistory = mongoose.model('ChatHistory', chatHistorySchema);
 export default ChatHistory;

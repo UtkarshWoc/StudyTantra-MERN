@@ -1,35 +1,27 @@
 import multer from 'multer';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import cloudinary from '../config/cloudinary.js';
 
-// Configure Cloudinary storage for multer
-// Files are uploaded directly to Cloudinary instead of local disk
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'studytantra_documents', // Cloudinary folder name
-    resource_type: 'raw',            // 'raw' for non-image files like PDFs
-    allowed_formats: ['pdf'],
-    // Use a unique public_id to avoid collisions
-    public_id: (req, file) => `doc-${Date.now()}-${file.originalname.replace(/\.[^.]+$/, '')}`,
-  },
-});
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
 
-// File filter (Only allow PDFs)
+// Files are kept in memory so the controller can validate the bytes and extract
+// text before handing them to private storage (services/storage.js).
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === 'application/pdf') {
     cb(null, true);
   } else {
-    cb(new Error('Only PDF files are allowed!'), false);
+    const err = new Error('Only PDF files are allowed!');
+    err.status = 400;
+    err.expose = true;
+    cb(err, false);
   }
 };
 
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage: multer.memoryStorage(),
+  fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB file size limit
-  }
+    fileSize: MAX_UPLOAD_BYTES,
+    files: 1,
+  },
 });
 
 export default upload;

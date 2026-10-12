@@ -7,17 +7,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Use gemini-2.5-flash — the latest fast model with generous free-tier limits
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-/**
- * Fetch a PDF from a URL and return its buffer
- */
-export const fetchPdfBuffer = async (url) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch PDF from Cloudinary: ${response.status} ${response.statusText}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-};
+// Gemini accepts PDFs inline (base64) up to ~20MB; uploads are capped at 10MB.
+const pdfPart = (pdfBuffer) => ({
+  inlineData: {
+    data: pdfBuffer.toString('base64'),
+    mimeType: 'application/pdf',
+  },
+});
 
 /**
  * Generate a summary from the provided document text
@@ -40,19 +36,14 @@ export const generateDocumentSummary = async (documentText) => {
  * Generate a summary by sending the PDF URL directly to Gemini
  * This is the preferred method — Gemini can process the PDF natively via URL
  */
-export const generateDocumentSummaryFromUrl = async (fileUrl) => {
+export const generateDocumentSummaryFromPdf = async (pdfBuffer) => {
   const prompt = `You are an expert AI study assistant. 
 Analyze this document and provide a concise, comprehensive summary 
 that captures the main concepts, key arguments, and important details.`;
 
   const result = await model.generateContent([
     prompt,
-    {
-      fileData: {
-        fileUri: fileUrl,
-        mimeType: 'application/pdf',
-      },
-    },
+    pdfPart(pdfBuffer),
   ]);
   return result.response.text();
 };
@@ -92,7 +83,7 @@ export const generateFlashcardsFromText = async (documentText, count = 10) => {
 /**
  * Generate flashcards by sending the PDF URL directly to Gemini
  */
-export const generateFlashcardsFromUrl = async (fileUrl, count = 10) => {
+export const generateFlashcardsFromPdf = async (pdfBuffer, count = 10) => {
   const prompt = `You are an expert AI study assistant.
 Analyze this document and extract ${count} important concepts to create study flashcards.
 Return the output STRICTLY as a raw JSON array of objects without markdown formatting.
@@ -102,12 +93,7 @@ Example: [{"question": "What is X?", "answer": "X is Y.", "topic": "Networking"}
 
   const result = await model.generateContent([
     prompt,
-    {
-      fileData: {
-        fileUri: fileUrl,
-        mimeType: 'application/pdf',
-      },
-    },
+    pdfPart(pdfBuffer),
   ]);
 
   let text = result.response.text();
@@ -152,20 +138,19 @@ export const chatWithDocument = async (documentText, historyMessages, newMessage
 };
 
 /**
- * Chat with document using Cloudinary URL — fetches PDF, extracts text, then chats
+ * Chat with a document — extracts the PDF's text, then chats
  */
-export const chatWithDocumentUrl = async (fileUrl, historyMessages, newMessage) => {
+export const chatWithDocumentPdf = async (pdfBuffer, historyMessages, newMessage) => {
   // For chat, we still need to extract text since Gemini startChat doesn't support fileData inline
   // Import pdf-parse/lib/pdf-parse.js directly to avoid its startup side-effect that crashes
   // in ESM environments by trying to load a test file from a hard-coded relative path.
   let textContent = '';
   try {
     const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
-    const pdfBuffer = await fetchPdfBuffer(fileUrl);
     const pdfData = await pdfParse(pdfBuffer);
     textContent = pdfData.text;
   } catch (err) {
-    console.warn('Failed to extract text from PDF URL for chat:', err.message);
+    console.warn('Failed to extract text from PDF for chat:', err.message);
     textContent = '';
   }
   
@@ -203,20 +188,15 @@ export const generateQuizFromText = async (documentText, count = 5) => {
 /**
  * Generate quiz by sending the PDF URL directly to Gemini
  */
-export const generateQuizFromUrl = async (fileUrl, count = 5) => {
+export const generateQuizFromPdf = async (pdfBuffer, count = 5) => {
   const prompt = `You are an expert AI study assistant.
 Create a ${count}-question multiple-choice quiz based on this document.
 Return the output STRICTLY as a raw JSON array of objects without markdown formatting.
-Each object must have exactly four keys: "question", "options" (array of 4 strings), "correctAnswer" (must be one of the options), and "explanation".`;
+Each object must have exactly five keys: "question", "options" (array of 4 strings), "correctAnswer" (must be one of the options), "explanation", and "topic" (a short 1-3 word category).`;
 
   const result = await model.generateContent([
     prompt,
-    {
-      fileData: {
-        fileUri: fileUrl,
-        mimeType: 'application/pdf',
-      },
-    },
+    pdfPart(pdfBuffer),
   ]);
 
   let text = result.response.text();

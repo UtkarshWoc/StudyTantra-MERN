@@ -35,5 +35,7 @@ const flashcardSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+flashcardSchema.index({ user: 1, document: 1 });
+
 const Flashcard = mongoose.model('Flashcard', flashcardSchema);
 export default Flashcard;

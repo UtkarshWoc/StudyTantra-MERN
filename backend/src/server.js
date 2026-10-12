@@ -6,10 +6,11 @@ dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
-// Catch any uncaught exceptions / unhandled rejections so they are logged
-// instead of silently crashing the process.
+// After an uncaught exception the process is in an unknown state: log and exit
+// so the platform (Railway) restarts a clean instance.
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err);
+  process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
   console.error('UNHANDLED REJECTION:', reason);

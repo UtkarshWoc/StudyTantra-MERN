@@ -12,7 +12,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import { notFound, errorHandler } from "./middlewares/errorMiddleware.js";
-import path from "path";
+import mongoose from "mongoose";
 
 dotenv.config();
 
@@ -22,27 +22,21 @@ const app = express();
 app.set('trust proxy', 1);
 
 // CORS: Must be defined before other middlewares so rejected requests still get CORS headers
-const allowedOrigins = [
+const normalizeOrigin = (o) => o.trim().replace(/\/+$/, '').toLowerCase();
+
+const allowedOrigins = new Set([
   'http://localhost:5173',
   'http://localhost:3000',
   'https://study-tantra-mern.vercel.app',
-];
-
-if (process.env.ALLOWED_ORIGIN) {
-  // Support comma-separated list of origins
-  const envOrigins = process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim());
-  allowedOrigins.push(...envOrigins);
-}
+  // Supports a comma-separated list of origins
+  ...(process.env.ALLOWED_ORIGIN || '').split(',').filter(Boolean).map(normalizeOrigin),
+]);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (e.g. mobile apps, curl) or if origin is in our whitelist
-    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-      callback(null, true);
-    } else {
-      // Return false to gracefully deny access without throwing an exception
-      callback(null, false);
-    }
+    // Requests with no Origin (curl, server-to-server) are allowed. Browser origins
+    // must match exactly — a prefix check would let "https://app.vercel.app.evil.com" in.
+    callback(null, !origin || allowedOrigins.has(normalizeOrigin(origin)));
   },
   methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
@@ -63,12 +57,26 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Health check route
+// Health check routes. /healthz reports 503 until MongoDB is connected so
+// platform health checks don't mark a DB-less instance as healthy.
 app.get("/", (req, res) => {
   res.send("StudyTantra API is running...");
+});
+
+app.get("/healthz", (req, res) => {
+  const dbReady = mongoose.connection.readyState === 1;
+  res.status(dbReady ? 200 : 503).json({ status: dbReady ? 'ok' : 'degraded', db: dbReady ? 'connected' : 'disconnected' });
+});
+
+// Fail fast instead of letting Mongoose buffer queries until they time out.
+app.use('/api', (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ message: 'Service is starting up or the database is unavailable. Please retry shortly.' });
+  }
+  next();
 });
 
 // API Routes

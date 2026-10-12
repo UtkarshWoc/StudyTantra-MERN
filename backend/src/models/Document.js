@@ -9,6 +9,8 @@ const documentSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
+    trim: true,
+    maxlength: 200,
   },
   isFavorited: {
     type: Boolean,
@@ -18,12 +20,23 @@ const documentSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  // Private storage location (see services/storage.js)
+  storageDriver: {
+    type: String,
+    enum: ['cloudinary', 'local'],
+  },
+  storageKey: {
+    type: String,
+  },
+  deliveryType: {
+    type: String,
+  },
+  // Legacy: public Cloudinary URL / public_id for documents uploaded before private storage
   filePath: {
     type: String,
-    required: true, // Cloudinary secure URL
   },
   cloudinaryPublicId: {
-    type: String,    // Cloudinary public_id for deletion
+    type: String,
   },
   pageCount: {
     type: Number,
@@ -36,7 +49,20 @@ const documentSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
+  toJSON: {
+    // Storage internals must never reach the client; files are served via /api/documents/:id/file
+    transform: (doc, ret) => {
+      delete ret.filePath;
+      delete ret.cloudinaryPublicId;
+      delete ret.storageKey;
+      delete ret.storageDriver;
+      delete ret.deliveryType;
+      return ret;
+    },
+  },
 });
+
+documentSchema.index({ user: 1, createdAt: -1 });
 
 const Document = mongoose.model('Document', documentSchema);
 export default Document;
