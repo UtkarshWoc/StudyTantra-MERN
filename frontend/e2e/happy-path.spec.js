@@ -35,9 +35,16 @@ test('register → upload → flashcards → quiz', async ({ page }) => {
   await page.locator('input[type="file"]').setInputFiles({ name: 'biology.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
   await expect(page).toHaveURL(/\/documents\/[a-f0-9]{24}$/, { timeout: 15_000 });
 
+  // Background processing finishes, then chat answers with a page citation
+  await expect(page.getByText(/^Ready/)).toBeVisible({ timeout: 20_000 });
+  await page.getByLabel('Ask a question').fill('What does photosynthesis convert?');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(page.getByText(/Mock response based on the document/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'p. 1' }).first()).toBeVisible();
+
   // Flashcards (mock AI)
   await page.goto('/flashcards');
-  await page.getByRole('button', { name: /generate fresh deck/i }).click();
+  await page.getByRole('button', { name: /generate deck/i }).click();
   await expect(page.getByText('Mock question 1?')).toBeVisible();
 
   // Quiz: answer every question with "A" (the mock's correct option)

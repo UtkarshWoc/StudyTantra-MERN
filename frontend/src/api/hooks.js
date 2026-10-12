@@ -15,11 +15,46 @@ const get = (url) => api.get(url).then((r) => r.data);
 
 // ---- Documents ----
 
-export const useDocuments = (options = {}) =>
-  useQuery({ queryKey: keys.documents, queryFn: () => get('/documents'), ...options });
+// Poll while documents are being processed (text extraction, OCR, embeddings)
+const POLL_MS = 2500;
 
-export const useDocument = (id, options = {}) =>
-  useQuery({ queryKey: keys.document(id), queryFn: () => get(`/documents/${id}`), enabled: Boolean(id), ...options });
+export const useDocuments = (options = {}) =>
+  useQuery({
+    queryKey: keys.documents,
+    queryFn: () => get('/documents'),
+    refetchInterval: (query) => (query.state.data?.some((d) => d.status === 'processing') ? POLL_MS : false),
+    ...options,
+  });
+
+export const useDocument = (id, options = {}) => {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: keys.document(id),
+    queryFn: async () => {
+      const doc = await get(`/documents/${id}`);
+      // Keep the library list in sync when this document finishes processing
+      qc.setQueryData(keys.documents, (docs) => docs?.map((d) => (d._id === doc._id ? doc : d)));
+      return doc;
+    },
+    enabled: Boolean(id),
+    refetchInterval: (query) => (query.state.data?.status === 'processing' ? POLL_MS : false),
+    ...options,
+  });
+};
+
+export const useReprocessDocument = (id) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(`/documents/${id}/reprocess`).then((r) => r.data),
+    onSuccess: (doc) => {
+      qc.setQueryData(keys.document(id), doc);
+      qc.invalidateQueries({ queryKey: keys.documents });
+    },
+  });
+};
+
+export const useExplainSelection = (docId) =>
+  useMutation({ mutationFn: ({ text, mode }) => api.post(`/ai/explain/${docId}`, { text, mode }).then((r) => r.data.explanation) });
 
 export const useUploadDocument = () => {
   const qc = useQueryClient();
@@ -126,6 +161,31 @@ export const useGenerateFlashcards = (docId) => {
   });
 };
 
+export const useFlashcardFromSelection = (docId) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text) => api.post(`/flashcards/from-selection/${docId}`, { text }).then((r) => r.data.flashcard),
+    onSuccess: (card) => {
+      qc.setQueryData(keys.flashcards(docId), (cards) => (cards ? [...cards, card] : cards));
+      qc.invalidateQueries({ queryKey: keys.dashboard });
+    },
+  });
+};
+
+export const useDeleteFlashcard = (docId) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/flashcards/${id}`),
+    onMutate: (id) => {
+      const previous = qc.getQueryData(keys.flashcards(docId));
+      qc.setQueryData(keys.flashcards(docId), (cards = []) => cards.filter((c) => c._id !== id));
+      return { previous };
+    },
+    onError: (err, id, ctx) => qc.setQueryData(keys.flashcards(docId), ctx?.previous),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.dashboard }),
+  });
+};
+
 // ---- Quizzes ----
 
 export const useQuizzes = (docId) =>
@@ -163,3 +223,11 @@ export const useQuizAttempts = (quizId, enabled = true) =>
 
 export const useChatHistory = (docId) =>
   useQuery({ queryKey: keys.chat(docId), queryFn: () => get(`/chat/${docId}`).then((d) => d.history), enabled: Boolean(docId) });
+
+export const useClearChat = (docId) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete(`/chat/${docId}`),
+    onSuccess: () => qc.setQueryData(keys.chat(docId), []),
+  });
+};

@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { CheckCircle2, XCircle, ChevronRight, Trophy, RefreshCcw, Loader2 } from 'lucide-react';
 import { checkQuizAnswer, useSubmitQuiz, useQuizAttempts } from '../api/hooks';
 
+// Fill-in and short-answer questions are typed, not picked from options
+const isTextQuestion = (q) => q?.type === 'fill_blank' || q?.type === 'short_answer';
+
 const QuizEngine = ({ quiz }) => {
   const [started, setStarted] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -15,6 +18,8 @@ const QuizEngine = ({ quiz }) => {
   const [checks, setChecks] = useState([]);
   // Questions including the answer key — only available from the server after an attempt
   const [reviewQuestions, setReviewQuestions] = useState(null);
+  // Per-question grading from the server attempt: [{ correct, feedback }]
+  const [attemptResults, setAttemptResults] = useState([]);
 
   const [score, setScore] = useState(quiz?.score || 0);
   const [showResults, setShowResults] = useState(quiz?.attempted || false);
@@ -35,6 +40,7 @@ const QuizEngine = ({ quiz }) => {
     const latest = attemptsData.attempts?.[0];
     if (latest) {
       setUserAnswers(latest.answers.map(a => a.answer));
+      setAttemptResults(latest.answers.map(a => ({ correct: a.correct, feedback: a.feedback })));
       setScore(latest.score);
     }
   }
@@ -56,15 +62,15 @@ const QuizEngine = ({ quiz }) => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedOption || checking) return;
+    if (!selectedOption?.trim() || checking) return;
     setChecking(true);
     setError('');
     try {
       // The answer key never reaches the client before answering; ask the server.
-      const data = await checkQuizAnswer(quiz._id, currentQuestion, selectedOption);
+      const data = await checkQuizAnswer(quiz._id, currentQuestion, selectedOption.trim());
 
       const newAnswers = [...userAnswers];
-      newAnswers[currentQuestion] = selectedOption;
+      newAnswers[currentQuestion] = selectedOption.trim();
       setUserAnswers(newAnswers);
 
       const newChecks = [...checks];
@@ -88,6 +94,7 @@ const QuizEngine = ({ quiz }) => {
     setIsSubmitted(false);
     setUserAnswers([]);
     setChecks([]);
+    setAttemptResults([]);
     setScore(0);
     setError('');
   };
@@ -104,6 +111,7 @@ const QuizEngine = ({ quiz }) => {
         const data = await submitQuiz.mutateAsync({ quizId: quiz._id, answers: userAnswers });
         setScore(data.score);
         setReviewQuestions(data.quiz?.questions || null);
+        setAttemptResults((data.attempt?.answers || []).map(a => ({ correct: a.correct, feedback: a.feedback })));
       } catch (err) {
         console.error("Failed to save quiz results", err);
         setError('Your results could not be saved.');
@@ -190,6 +198,19 @@ const QuizEngine = ({ quiz }) => {
                 <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                   <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">{idx + 1}. {q.question}</h4>
 
+                  {isTextQuestion(q) ? (
+                    <div className="space-y-2 mb-4 text-sm">
+                      {hasUserAnswers && (
+                        <div className={`p-3 rounded-lg border ${attemptResults[idx]?.correct ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 text-emerald-800 dark:text-emerald-200' : 'bg-red-50 dark:bg-red-900/30 border-red-500 text-red-800 dark:text-red-200'}`}>
+                          <span className="font-semibold">Your answer: </span>{userAnswer || <em>No answer</em>}
+                          {attemptResults[idx]?.feedback && <p className="mt-1 text-xs opacity-90">{attemptResults[idx].feedback}</p>}
+                        </div>
+                      )}
+                      <div className="p-3 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">
+                        <span className="font-semibold">Model answer: </span>{q.correctAnswer}
+                      </div>
+                    </div>
+                  ) : (
                   <div className="space-y-2 mb-4 text-sm font-medium">
                     {q.options.map((opt, optIdx) => {
                       const isCorrectOpt = opt === q.correctAnswer;
@@ -213,6 +234,7 @@ const QuizEngine = ({ quiz }) => {
                       );
                     })}
                   </div>
+                  )}
 
                   <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/30 text-sm">
                     <span className="font-bold text-indigo-800 dark:text-indigo-300 block mb-1">Explanation:</span>
@@ -255,7 +277,19 @@ const QuizEngine = ({ quiz }) => {
         </div>
 
         <div className="p-6 md:p-8 space-y-3 bg-gray-50/30 dark:bg-gray-900/30">
-          {currentQ.options.map((option, idx) => {
+          {isTextQuestion(currentQ) && (
+            <textarea
+              aria-label="Your answer"
+              value={selectedOption ?? ''}
+              onChange={(e) => !isSubmitted && setSelectedOption(e.target.value)}
+              readOnly={isSubmitted}
+              maxLength={1000}
+              rows={currentQ.type === 'short_answer' ? 4 : 1}
+              placeholder={currentQ.type === 'short_answer' ? 'Write your answer in a sentence or two...' : 'Type the missing word(s)...'}
+              className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-amber-500 resize-none"
+            />
+          )}
+          {!isTextQuestion(currentQ) && currentQ.options.map((option, idx) => {
             const isSelected = selectedOption === option;
             const isCorrect = option === currentCheck?.correctAnswer;
 
@@ -299,6 +333,8 @@ const QuizEngine = ({ quiz }) => {
                 {currentCheck?.correct ? 'Correct!' : 'Incorrect'}
               </h4>
               <p className={`text-sm leading-relaxed ${currentCheck?.correct ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
+                {currentCheck?.feedback && <span className="block mb-2 font-medium">{currentCheck.feedback}</span>}
+                {isTextQuestion(currentQ) && <span className="block mb-2"><span className="font-semibold">Model answer:</span> {currentCheck?.correctAnswer}</span>}
                 {currentCheck?.explanation}
               </p>
             </div>
@@ -318,7 +354,7 @@ const QuizEngine = ({ quiz }) => {
             {error && <p className="text-sm text-red-500">{error}</p>}
             <button
               onClick={handleSubmit}
-              disabled={selectedOption === null || checking}
+              disabled={!selectedOption?.trim() || checking}
               className="w-full md:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-indigo-700 hover:shadow-lg transition-all shadow-md disabled:opacity-50 disabled:hover:shadow-md disabled:cursor-not-allowed cursor-pointer"
             >
               {checking ? 'Checking...' : 'Submit Answer'}

@@ -31,7 +31,7 @@ const Documents = () => {
 
       {loading ? (<div className="flex flex-col items-center py-20 text-slate-500"><Loader2 className="animate-spin mb-4 text-amber-500" size={36} /><p className="font-medium">Loading library...</p></div>) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {visibleDocuments.map(doc => (<div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1"><DocumentCard title={doc.title} size={formatBytes(doc.sizeBytes)} date={new Date(doc.createdAt).toLocaleDateString()} isFavorited={doc.isFavorited} onFavoriteToggle={() => handleToggleFavorite(doc._id)} onDelete={() => handleDelete(doc._id)} /></div>))}
+          {visibleDocuments.map(doc => (<div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1"><DocumentCard title={doc.title} size={formatBytes(doc.sizeBytes)} document={doc} date={new Date(doc.createdAt).toLocaleDateString()} isFavorited={doc.isFavorited} onFavoriteToggle={() => handleToggleFavorite(doc._id)} onDelete={() => handleDelete(doc._id)} /></div>))}
         </div>
       )}
 

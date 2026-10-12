@@ -16,6 +16,10 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
     ],
+    build: {
+      // pdf.js makes the (lazy-loaded) document page chunk ~800 kB; everything else is far smaller
+      chunkSizeWarningLimit: 900,
+    },
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.js'],

@@ -67,7 +67,7 @@ const Favorites = () => {
               <div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1">
                 <DocumentCard
                   title={doc.title}
-                  size={formatBytes(doc.sizeBytes)}
+                  size={formatBytes(doc.sizeBytes)} document={doc}
                   date={new Date(doc.createdAt).toLocaleDateString()}
                   isFavorited={doc.isFavorited}
                   onFavoriteToggle={() => handleToggleFavorite(doc._id)}

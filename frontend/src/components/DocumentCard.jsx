@@ -1,7 +1,8 @@
 import React from 'react';
 import { FileText, Trash2 } from 'lucide-react';
+import DocumentStatus from './DocumentStatus';
 
-const DocumentCard = ({ title, size, date, onDelete, isFavorited, onFavoriteToggle }) => {
+const DocumentCard = ({ title, size, date, onDelete, isFavorited, onFavoriteToggle, document }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl bg-[#111827] border border-[#334155]/50 shadow-xl shadow-black/10 p-5 hover:border-amber-500/40 hover:shadow-amber-900/10 transition-all group flex items-start justify-between cursor-pointer">
       <div className="flex items-start space-x-4 flex-1 overflow-hidden pr-2">
@@ -15,6 +16,7 @@ const DocumentCard = ({ title, size, date, onDelete, isFavorited, onFavoriteTogg
             <span>&bull;</span>
             <span>{date}</span>
           </div>
+          {document && <div className="mt-1.5"><DocumentStatus document={document} compact /></div>}
         </div>
       </div>
       <div className="flex flex-col space-y-1 items-end sm:flex-row sm:space-y-0 sm:space-x-1 sm:items-center">

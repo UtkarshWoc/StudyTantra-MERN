@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import QuizEngine from '../components/QuizEngine';
 import { Loader2, Zap } from 'lucide-react';
+import GenerationOptions from '../components/GenerationOptions';
+import DocumentStatus from '../components/DocumentStatus';
 import { useDocuments, useQuizzes, useGenerateQuiz } from '../api/hooks';
 import { getErrorMessage } from '../lib/api';
+import { defaultOptions, toRequestBody } from '../lib/generation';
 
 const Quizzes = () => {
   const { data: documents = [], isLoading: loadingDocs } = useDocuments();
   const [pickedDocId, setPickedDocId] = useState('');
   const selectedDocId = pickedDocId || documents[0]?._id || '';
   const setSelectedDocId = (id) => { setPickedDocId(id); setPickedQuizId(''); };
+  const selectedDoc = documents.find((d) => d._id === selectedDocId);
+  const ready = selectedDoc?.status === 'ready';
 
-  const [quizCount, setQuizCount] = useState(5);
+  const [options, setOptions] = useState(() => defaultOptions('quiz'));
   const [pickedQuizId, setPickedQuizId] = useState('');
   const { data: quizzes = [], isLoading: loadingQuiz } = useQuizzes(selectedDocId);
   const activeQuiz = quizzes.find(q => q._id === pickedQuizId) || quizzes[0] || null;
@@ -21,7 +26,7 @@ const Quizzes = () => {
 
   const generateQuiz = () => {
     if (!selectedDocId) return;
-    generate.mutate({ count: quizCount }, { onSuccess: (data) => setPickedQuizId(data.quiz._id) });
+    generate.mutate(toRequestBody(options, 'quiz'), { onSuccess: (data) => setPickedQuizId(data.quiz._id) });
   };
 
   if (loadingDocs) {
@@ -40,37 +45,31 @@ const Quizzes = () => {
         {documents.length === 0 ? (
           <p className="text-gray-500">Please upload a document in Your Library first to take quizzes.</p>
         ) : (
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Select a Document</label>
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="quiz-doc" className="block text-sm font-bold text-gray-700 dark:text-gray-300">Document</label>
+                <DocumentStatus document={selectedDoc} />
+              </div>
               <select
+                id="quiz-doc"
                 value={selectedDocId}
                 onChange={(e) => setSelectedDocId(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl font-medium cursor-pointer"
               >
                 {documents.map(doc => (
                   <option key={doc._id} value={doc._id}>{doc.title}</option>
                 ))}
               </select>
             </div>
-            <div className="w-full sm:w-32">
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Count</label>
-              <select
-                value={quizCount}
-                onChange={(e) => setQuizCount(Number(e.target.value))}
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium cursor-pointer"
-              >
-                <option value={5}>5 Qs</option>
-                <option value={10}>10 Qs</option>
-                <option value={15}>15 Qs</option>
-              </select>
-            </div>
 
-            <div className="flex items-end w-full sm:w-auto mt-4 sm:mt-0">
+            <GenerationOptions kind="quiz" value={options} onChange={setOptions} pageCount={selectedDoc?.pageCount} />
+
+            <div className="flex justify-end">
               <button
                 onClick={generateQuiz}
-                disabled={generating || loadingQuiz}
-                className="h-[50px] w-full px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                disabled={generating || loadingQuiz || !ready}
+                className="h-12 px-6 bg-amber-500 hover:bg-amber-600 text-[#0b1120] font-bold rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {generating ? <><Loader2 className="animate-spin mr-2" size={18} /> Generating AI Quiz...</> : <><Zap size={18} className="mr-2" /> Generate New Quiz</>}
               </button>
@@ -89,7 +88,7 @@ const Quizzes = () => {
             >
               {quizzes.map((q, i) => (
                 <option key={q._id} value={q._id}>
-                  {`Quiz ${quizzes.length - i} · ${q.totalQuestions} Qs · ${new Date(q.createdAt).toLocaleDateString()}${q.attemptsCount ? ` · best ${q.bestScore}/${q.totalQuestions}` : ' · not attempted'}`}
+                  {`Quiz ${quizzes.length - i} · ${q.totalQuestions} Qs${q.scope ? ` · ${q.scope}` : ''} · ${new Date(q.createdAt).toLocaleDateString()}${q.attemptsCount ? ` · best ${q.bestScore}/${q.totalQuestions}` : ' · not attempted'}`}
                 </option>
               ))}
             </select>
