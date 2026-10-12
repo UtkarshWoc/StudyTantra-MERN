@@ -1,25 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Loader2, Square, Trash2, BookOpen } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useChatHistory, useClearChat, keys } from '../api/hooks';
+import { useChatHistory, useClearChat, chatPath, chatKey } from '../api/hooks';
 import { streamChat } from '../lib/chatStream';
 import Markdown from './Markdown';
 
 const CitationChips = ({ citations, onCitation }) => {
-  const pages = [...new Set((citations || []).map((c) => c.page))].sort((a, b) => a - b);
-  if (!pages.length) return null;
+  // One chip per document+page; collection chats name the document
+  const seen = new Set();
+  const chips = (citations || []).filter((c) => {
+    const key = `${c.document}-${c.page}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (!chips.length) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
       <BookOpen size={12} className="text-gray-400" />
       <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Sources</span>
-      {pages.map((page) => (
+      {chips.map((c) => (
         <button
-          key={page}
+          key={`${c.document}-${c.page}`}
           type="button"
-          onClick={() => onCitation?.(page)}
+          onClick={() => onCitation?.(c.page, c)}
           className="px-1.5 py-0.5 rounded-md text-[11px] font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-300 cursor-pointer"
         >
-          p. {page}
+          {c.title ? `${c.title} · ` : ''}p. {c.page}
         </button>
       ))}
     </div>
@@ -41,10 +48,11 @@ const Bubble = ({ sender, children }) => (
  * Document chat. Answers stream in token by token, cite pages ([p. N]) that
  * jump the viewer via onCitation, and `draft` ({ text }) lets the viewer prefill a question.
  */
-const ChatInterface = ({ documentId, documentTitle, ready = true, onCitation, draft, onDraftUsed }) => {
+const ChatInterface = ({ documentId, collectionId, documentTitle, ready = true, onCitation, draft, onDraftUsed }) => {
   const queryClient = useQueryClient();
-  const { data: history = [], isLoading: loadingHistory } = useChatHistory(documentId);
-  const clearChat = useClearChat(documentId);
+  const target = { documentId, collectionId };
+  const { data: history = [], isLoading: loadingHistory } = useChatHistory(target);
+  const clearChat = useClearChat(target);
 
   const [input, setInput] = useState('');
   const [pending, setPending] = useState(null); // { question, answer, citations, error }
@@ -76,7 +84,7 @@ const ChatInterface = ({ documentId, documentTitle, ready = true, onCitation, dr
   const handleSend = async (e) => {
     e.preventDefault();
     const question = input.trim();
-    if (!question || !documentId || streaming || !ready) return;
+    if (!question || streaming || !ready) return;
 
     setInput('');
     setPending({ question, answer: '', citations: [] });
@@ -84,17 +92,17 @@ const ChatInterface = ({ documentId, documentTitle, ready = true, onCitation, dr
     abortRef.current = controller;
 
     try {
-      const finalHistory = await streamChat(documentId, question, {
+      const finalHistory = await streamChat(chatPath(target), question, {
         signal: controller.signal,
         onSources: ({ citations }) => setPending((p) => ({ ...p, citations })),
         onToken: (text) => setPending((p) => ({ ...p, answer: p.answer + text })),
       });
-      if (finalHistory) queryClient.setQueryData(keys.chat(documentId), finalHistory);
+      if (finalHistory) queryClient.setQueryData(chatKey(target), finalHistory);
       setPending(null);
     } catch (error) {
       if (controller.signal.aborted) {
         // The server keeps the partial answer; reload the conversation
-        await queryClient.invalidateQueries({ queryKey: keys.chat(documentId) });
+        await queryClient.invalidateQueries({ queryKey: chatKey(target) });
         setPending(null);
       } else {
         setPending((p) => ({ ...p, error: error.message }));
@@ -143,7 +151,7 @@ const ChatInterface = ({ documentId, documentTitle, ready = true, onCitation, dr
       <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-gray-50/50 dark:bg-gray-900/50" aria-live="polite">
         {messages.length === 0 && !pending && (
           <Bubble sender="ai">
-            <p className="text-[15px]">Hi! Ask me anything about <span className="font-semibold">{documentTitle || 'this document'}</span>. I'll answer from the document and show which pages I used. Tip: select text in the PDF to explain it.</p>
+            <p className="text-[15px]">Hi! Ask me anything about <span className="font-semibold">{documentTitle || 'this document'}</span>. I'll answer from {collectionId ? 'these documents' : 'the document'} and show which pages I used. Tip: select text in the PDF to explain it.</p>
           </Bubble>
         )}
 

@@ -9,7 +9,7 @@ const labelClass = "block text-xs font-bold uppercase tracking-wide text-gray-50
  * Options for AI generation: how many, which part of the document, difficulty,
  * and (for quizzes) question types.
  */
-const GenerationOptions = ({ kind, value, onChange, pageCount }) => {
+const GenerationOptions = ({ kind, value, onChange, pageCount, allowPages = true }) => {
   const set = (patch) => onChange({ ...value, ...patch });
   const counts = kind === 'quiz' ? [5, 10, 15, 20] : [5, 10, 20, 30];
 
@@ -31,7 +31,7 @@ const GenerationOptions = ({ kind, value, onChange, pageCount }) => {
         <label htmlFor={`${kind}-scope`} className={labelClass}>From</label>
         <select id={`${kind}-scope`} value={value.scope} onChange={(e) => set({ scope: e.target.value, to: value.to || pageCount || 1 })} className={selectClass}>
           <option value="all">Whole document</option>
-          <option value="pages">Page range</option>
+          {allowPages && <option value="pages">Page range</option>}
           <option value="topic">A topic</option>
         </select>
       </div>

@@ -27,7 +27,7 @@ describe('streamChat', () => {
 
     const onSources = vi.fn();
     const tokens = [];
-    const history = await streamChat('doc1', 'hi', { onSources, onToken: (t) => tokens.push(t) });
+    const history = await streamChat('/chat/doc1', 'hi', { onSources, onToken: (t) => tokens.push(t) });
 
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/chat\/doc1\/stream$/);
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer t');
@@ -38,9 +38,9 @@ describe('streamChat', () => {
 
   it('surfaces server errors before and during the stream', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: 'Still processing' }), { status: 409 })));
-    await expect(streamChat('d', 'q')).rejects.toThrow('Still processing');
+    await expect(streamChat('/chat/d', 'q')).rejects.toThrow('Still processing');
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse(['event: error\ndata: {"message":"AI down"}\n\n'])));
-    await expect(streamChat('d', 'q')).rejects.toThrow('AI down');
+    await expect(streamChat('/chat/d', 'q')).rejects.toThrow('AI down');
   });
 });

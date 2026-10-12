@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { ArrowLeft, Loader2, ExternalLink, X, FileText, MessageSquare, ScrollText, RefreshCw, Lightbulb, CheckCircle2 } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Loader2, ExternalLink, X, FileText, MessageSquare, ScrollText, RefreshCw, Lightbulb, CheckCircle2, Printer } from 'lucide-react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ChatInterface from '../components/ChatInterface';
 import PdfViewer from '../components/PdfViewer';
 import Markdown from '../components/Markdown';
@@ -22,7 +22,11 @@ const SummaryPanel = ({ document, onCitation }) => {
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-gray-900 dark:text-white">Summary</h3>
+        <h3 className="font-bold text-gray-900 dark:text-white">Summary: <span className="font-medium">{document.title}</span></h3>
+        <div className="flex items-center gap-2 print:hidden">
+        {document.summary && (
+          <button type="button" onClick={() => window.print()} aria-label="Print or save as PDF" className="p-2 rounded-lg text-gray-400 hover:text-amber-500 cursor-pointer"><Printer size={16} /></button>
+        )}
         <button
           type="button"
           onClick={() => generate.mutate()}
@@ -32,6 +36,7 @@ const SummaryPanel = ({ document, onCitation }) => {
           {generate.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           {document.summary ? 'Regenerate' : 'Generate summary'}
         </button>
+        </div>
       </div>
       {generate.isError && <p className="text-sm text-red-500 mb-3">{getErrorMessage(generate.error)}</p>}
       {document.summary ? (
@@ -55,7 +60,8 @@ const DocumentDetails = () => {
   const explain = useExplainSelection(id);
   const makeFlashcard = useFlashcardFromSelection(id);
 
-  const [page, setPage] = useState(1);
+  const [searchParams] = useSearchParams();
+  const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get('page')) || 1));
   const [tab, setTab] = useState('chat');
   const [draft, setDraft] = useState(null);
   const [panel, setPanel] = useState(null); // { kind: 'explain'|'flashcard', text, mode? }

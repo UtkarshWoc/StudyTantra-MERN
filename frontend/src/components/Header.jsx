@@ -5,6 +5,9 @@ import { useAuth } from '../context/auth';
 
 const titles = [
   ['/dashboard', 'Dashboard'],
+  ['/review', 'Review'],
+  ['/planner', 'Planner'],
+  ['/collections', 'Collection'],
   ['/documents', 'Library'],
   ['/flashcards', 'Flashcards'],
   ['/quizzes', 'Quizzes'],

@@ -16,6 +16,10 @@ const Favorites = lazy(() => import('./pages/Favorites'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const Review = lazy(() => import('./pages/Review'));
+const Planner = lazy(() => import('./pages/Planner'));
+const PlanDetail = lazy(() => import('./pages/PlanDetail'));
+const CollectionDetail = lazy(() => import('./pages/CollectionDetail'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center py-24">
@@ -78,7 +82,11 @@ function App() {
                 <Route index element={<Documents />} />
                 <Route path=":id" element={<DocumentDetails />} />
               </Route>
+              <Route path="review" element={<Review />} />
               <Route path="flashcards" element={<Flashcards />} />
+              <Route path="planner" element={<Planner />} />
+              <Route path="planner/:id" element={<PlanDetail />} />
+              <Route path="collections/:id" element={<CollectionDetail />} />
               <Route path="quizzes" element={<Quizzes />} />
               <Route path="favorites" element={<Favorites />} />
               <Route path="profile" element={<Profile />} />

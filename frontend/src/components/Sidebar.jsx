@@ -1,13 +1,16 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Layers, Target, Star, User, Settings, LogOut, Hexagon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, FileText, Layers, Target, Star, User, Settings, LogOut, Hexagon, ChevronLeft, ChevronRight, Brain, CalendarDays } from 'lucide-react';
+import { useInsights } from '../api/hooks';
 import { useAuth } from '../context/auth';
 
 const nav = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Review', path: '/review', icon: Brain, badge: 'due' },
   { name: 'Library', path: '/documents', icon: FileText },
   { name: 'Flashcards', path: '/flashcards', icon: Layers },
   { name: 'Quizzes', path: '/quizzes', icon: Target },
+  { name: 'Planner', path: '/planner', icon: CalendarDays },
   { name: 'Favorites', path: '/favorites', icon: Star },
 ];
 
@@ -18,6 +21,8 @@ const accountNav = [
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { logout } = useAuth();
+  const { data: insights } = useInsights();
+  const due = insights ? insights.due.reviews + insights.due.new : 0;
   const navigate = useNavigate();
 
   const handleLogout = async () => { await logout(); navigate('/login'); };
@@ -65,7 +70,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             }
           >
             <item.icon size={18} strokeWidth={1.8} className={isCollapsed ? 'mx-auto' : 'mr-2.5 shrink-0'} />
-            {!isCollapsed && <span className="truncate">{item.name}</span>}
+            {!isCollapsed && <span className="truncate flex-1">{item.name}</span>}
+            {item.badge === 'due' && due > 0 && (
+              <span aria-label={`${due} cards due`} className={`${isCollapsed ? 'absolute ml-6 -mt-5' : ''} min-w-5 px-1.5 py-0.5 rounded-full bg-amber-500 text-[#0b1120] text-[10px] font-extrabold text-center`}>{due > 99 ? '99+' : due}</span>
+            )}
           </NavLink>
         ))}
 

@@ -3,6 +3,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from './auth';
 import { api, refreshSession, setAccessToken, setSessionExpiredHandler, getErrorMessage } from '../lib/api';
 
+// Day boundaries (streaks, daily goal) follow the user's timezone. Accounts
+// start on UTC; adopt the browser's timezone the first time we see them.
+const syncTimezone = (user, setUser) => {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!user || user.preferences?.timezone !== 'UTC' || !tz || tz === 'UTC') return;
+  api.put('/auth/preferences', { timezone: tz }).then(({ data }) => setUser(data.user)).catch(() => {});
+};
+
 export const AuthProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
@@ -23,7 +31,10 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     localStorage.removeItem('userInfo'); // tokens used to be stored here; never again
     refreshSession()
-      .then((data) => setUser(data.user))
+      .then((data) => {
+        setUser(data.user);
+        syncTimezone(data.user, setUser);
+      })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
@@ -31,6 +42,7 @@ export const AuthProvider = ({ children }) => {
   const startSession = useCallback((data) => {
     setAccessToken(data.accessToken);
     setUser(data.user);
+    syncTimezone(data.user, setUser);
     return { success: true, data };
   }, []);
 
@@ -89,6 +101,18 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const updatePreferences = useCallback(async (preferences) => {
+    try {
+      const { data } = await api.put('/auth/preferences', preferences);
+      setUser(data.user);
+      queryClient.invalidateQueries({ queryKey: ['insights'] });
+      queryClient.invalidateQueries({ queryKey: ['review'] });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: getErrorMessage(error, 'Could not save preferences.') };
+    }
+  }, [queryClient]);
+
   const deleteAccount = useCallback(async (password, confirm) => {
     try {
       await api.delete('/auth/account', { data: { password, confirm } });
@@ -100,8 +124,8 @@ export const AuthProvider = ({ children }) => {
   }, [clearSession]);
 
   const value = useMemo(() => ({
-    user, setUser, login, register, loginWithGoogle, logout, refreshUser, updateProfile, changePassword, deleteAccount,
-  }), [user, login, register, loginWithGoogle, logout, refreshUser, updateProfile, changePassword, deleteAccount]);
+    user, setUser, login, register, loginWithGoogle, logout, refreshUser, updateProfile, changePassword, deleteAccount, updatePreferences,
+  }), [user, login, register, loginWithGoogle, logout, refreshUser, updateProfile, changePassword, deleteAccount, updatePreferences]);
 
   if (loading) {
     return (

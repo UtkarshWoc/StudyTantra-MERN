@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import QuizEngine from '../components/QuizEngine';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2, Zap, AlertTriangle } from 'lucide-react';
 import GenerationOptions from '../components/GenerationOptions';
 import DocumentStatus from '../components/DocumentStatus';
-import { useDocuments, useQuizzes, useGenerateQuiz } from '../api/hooks';
+import { useDocuments, useQuizzes, useGenerateQuiz, useTopics } from '../api/hooks';
 import { getErrorMessage } from '../lib/api';
 import { defaultOptions, toRequestBody } from '../lib/generation';
 
 const Quizzes = () => {
   const { data: documents = [], isLoading: loadingDocs } = useDocuments();
-  const [pickedDocId, setPickedDocId] = useState('');
+  // ?document=&topic= (from dashboard weak topics and study-plan tasks)
+  const [searchParams] = useSearchParams();
+  const [pickedDocId, setPickedDocId] = useState(searchParams.get('document') || '');
   const selectedDocId = pickedDocId || documents[0]?._id || '';
   const setSelectedDocId = (id) => { setPickedDocId(id); setPickedQuizId(''); };
   const selectedDoc = documents.find((d) => d._id === selectedDocId);
   const ready = selectedDoc?.status === 'ready';
 
-  const [options, setOptions] = useState(() => defaultOptions('quiz'));
+  const [options, setOptions] = useState(() => {
+    const topic = searchParams.get('topic');
+    return topic ? { ...defaultOptions('quiz'), scope: 'topic', query: topic } : defaultOptions('quiz');
+  });
+  const { data: topics = [] } = useTopics(selectedDocId || undefined);
+  const weakTopics = selectedDocId ? topics.filter((t) => t.weak) : [];
   const [pickedQuizId, setPickedQuizId] = useState('');
   const { data: quizzes = [], isLoading: loadingQuiz } = useQuizzes(selectedDocId);
   const activeQuiz = quizzes.find(q => q._id === pickedQuizId) || quizzes[0] || null;
@@ -23,6 +31,13 @@ const Quizzes = () => {
   const generate = useGenerateQuiz(selectedDocId);
   const generating = generate.isPending;
   const error = generate.error ? getErrorMessage(generate.error, 'Error generating quiz') : '';
+
+  const practiceWeakTopics = () => {
+    const query = weakTopics.slice(0, 5).map((t) => t.topic).join(', ');
+    const next = { ...options, scope: 'topic', query };
+    setOptions(next);
+    generate.mutate(toRequestBody(next, 'quiz'), { onSuccess: (data) => setPickedQuizId(data.quiz._id) });
+  };
 
   const generateQuiz = () => {
     if (!selectedDocId) return;
@@ -62,6 +77,16 @@ const Quizzes = () => {
                 ))}
               </select>
             </div>
+
+            {weakTopics.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle size={18} className="text-amber-500 shrink-0" />
+                <p className="flex-1 text-sm text-gray-700 dark:text-gray-200">
+                  <span className="font-semibold">Weak topics:</span> {weakTopics.slice(0, 5).map((t) => `${t.topic} (${t.accuracy}%)`).join(', ')}
+                </p>
+                <button onClick={practiceWeakTopics} disabled={generating || !ready} className="text-sm font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap disabled:opacity-50 cursor-pointer">Quiz me on these</button>
+              </div>
+            )}
 
             <GenerationOptions kind="quiz" value={options} onChange={setOptions} pageCount={selectedDoc?.pageCount} />
 

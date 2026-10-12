@@ -1,12 +1,13 @@
 import { authFetch } from './api';
 
 /**
- * POST a chat message and consume the Server-Sent Events response.
+ * POST a chat message to `${path}/stream` (path from chatPath) and consume the
+ * Server-Sent Events response.
  * Calls onSources({ citations }), onToken(text) per chunk; resolves with the
  * final history. Pass an AbortSignal to stop streaming.
  */
-export const streamChat = async (docId, message, { onSources, onToken, signal } = {}) => {
-  const res = await authFetch(`/chat/${docId}/stream`, {
+export const streamChat = async (path, message, { onSources, onToken, signal } = {}) => {
+  const res = await authFetch(`${path}/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),

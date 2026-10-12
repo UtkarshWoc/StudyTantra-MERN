@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import FlashcardViewer from '../components/FlashcardViewer';
 import GenerationOptions from '../components/GenerationOptions';
 import DocumentStatus from '../components/DocumentStatus';
-import { Layers, Loader2, Zap, Trash2, List } from 'lucide-react';
+import { Layers, Loader2, Zap, Trash2, List, Brain, Download } from 'lucide-react';
 import { useDocuments, useFlashcards, useGenerateFlashcards, useDeleteFlashcard } from '../api/hooks';
 import { getErrorMessage } from '../lib/api';
 import { defaultOptions, toRequestBody } from '../lib/generation';
+import { downloadFromApi } from '../lib/download';
 
 const toViewerCard = (card) => ({ id: card._id, front: card.question, back: card.answer, topic: card.topic || 'General' });
 
@@ -123,12 +125,29 @@ const Flashcards = () => {
           </div>
         ) : flashcards && flashcards.length > 0 ? (
           <>
-            <div className="flex justify-end gap-1 mb-4" role="tablist">
-              {[{ id: 'study', label: 'Study', icon: Layers }, { id: 'list', label: `All cards (${cards.length})`, icon: List }].map(t => (
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link to={`/review?document=${selectedDocId}`} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-[#0b1120] text-sm font-bold">
+                  <Brain size={16} /> Review with spaced repetition
+                </Link>
+                {[{ format: 'csv', label: 'CSV' }, { format: 'anki', label: 'Anki' }].map((x) => (
+                  <button
+                    key={x.format}
+                    type="button"
+                    onClick={() => downloadFromApi(`/flashcards/export/${selectedDocId}?format=${x.format}`, `flashcards.${x.format === 'csv' ? 'csv' : 'txt'}`).catch(() => window.alert('Export failed. Please try again.'))}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:border-amber-500/50 cursor-pointer"
+                  >
+                    <Download size={14} /> {x.label}
+                  </button>
+                ))}
+              </div>
+            <div className="flex justify-end gap-1" role="tablist">
+              {[{ id: 'study', label: 'Practice all', icon: Layers }, { id: 'list', label: `All cards (${cards.length})`, icon: List }].map(t => (
                 <button key={t.id} role="tab" aria-selected={view === t.id} onClick={() => setView(t.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold cursor-pointer ${view === t.id ? 'bg-amber-500/15 text-amber-500' : 'text-gray-500 hover:text-gray-300'}`}>
                   <t.icon size={15} /> {t.label}
                 </button>
               ))}
+            </div>
             </div>
             {view === 'study'
               ? <FlashcardViewer key={`${selectedDocId}-${cards.length}`} cards={flashcards} />

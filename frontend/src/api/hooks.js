@@ -221,13 +221,157 @@ export const useQuizAttempts = (quizId, enabled = true) =>
 
 // ---- Chat ----
 
-export const useChatHistory = (docId) =>
-  useQuery({ queryKey: keys.chat(docId), queryFn: () => get(`/chat/${docId}`).then((d) => d.history), enabled: Boolean(docId) });
+// A chat targets one document or a whole collection
+export const chatPath = ({ documentId, collectionId }) =>
+  (collectionId ? `/chat/collection/${collectionId}` : `/chat/${documentId}`);
+export const chatKey = ({ documentId, collectionId }) =>
+  (collectionId ? ['chat', 'collection', collectionId] : keys.chat(documentId));
 
-export const useClearChat = (docId) => {
+export const useChatHistory = (target) =>
+  useQuery({
+    queryKey: chatKey(target),
+    queryFn: () => get(chatPath(target)).then((d) => d.history),
+    enabled: Boolean(target.documentId || target.collectionId),
+  });
+
+export const useClearChat = (target) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.delete(`/chat/${docId}`),
-    onSuccess: () => qc.setQueryData(keys.chat(docId), []),
+    mutationFn: () => api.delete(chatPath(target)),
+    onSuccess: () => qc.setQueryData(chatKey(target), []),
+  });
+};
+
+// ---- Documents: rename / move ----
+
+export const useUpdateDocument = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }) => api.patch(`/documents/${id}`, body).then((r) => r.data),
+    onSuccess: (doc) => {
+      qc.setQueryData(keys.document(doc._id), doc);
+      qc.setQueryData(keys.documents, (docs) => docs?.map((d) => (d._id === doc._id ? doc : d)));
+      qc.invalidateQueries({ queryKey: ['collections'] });
+    },
+  });
+};
+
+// ---- Spaced repetition ----
+
+export const useReviewQueue = (documentId) =>
+  useQuery({
+    queryKey: ['review', documentId || 'all'],
+    queryFn: () => get(`/review/queue${documentId ? `?document=${documentId}` : ''}`),
+    staleTime: 0,
+  });
+
+export const useSubmitReview = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, rating }) => api.post(`/review/${id}`, { rating }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['insights'] }),
+  });
+};
+
+// ---- Insights ----
+
+export const useInsights = () => useQuery({ queryKey: ['insights', 'overview'], queryFn: () => get('/insights/overview') });
+
+export const useTopics = (documentId) =>
+  useQuery({
+    queryKey: ['insights', 'topics', documentId || 'all'],
+    queryFn: () => get(`/insights/topics${documentId ? `?document=${documentId}` : ''}`).then((d) => d.topics),
+  });
+
+// ---- Collections ----
+
+export const useCollections = () => useQuery({ queryKey: ['collections'], queryFn: () => get('/collections') });
+
+export const useCollection = (id) =>
+  useQuery({ queryKey: ['collections', id], queryFn: () => get(`/collections/${id}`), enabled: Boolean(id) });
+
+export const useSaveCollection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }) => (id ? api.put(`/collections/${id}`, body) : api.post('/collections', body)).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['collections'] }),
+  });
+};
+
+export const useDeleteCollection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/collections/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['collections'] });
+      qc.invalidateQueries({ queryKey: keys.documents });
+    },
+  });
+};
+
+export const useCollectionQuizzes = (collectionId) =>
+  useQuery({ queryKey: ['quizzes', 'collection', collectionId], queryFn: () => get(`/quizzes/collection/${collectionId}`), enabled: Boolean(collectionId) });
+
+export const useGenerateCollectionQuiz = (collectionId) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => api.post(`/quizzes/generate/collection/${collectionId}`, body).then((r) => r.data),
+    onSuccess: (data) => qc.setQueryData(['quizzes', 'collection', collectionId], (quizzes = []) => [data.quiz, ...quizzes]),
+  });
+};
+
+// ---- Study planner ----
+
+export const usePlans = () => useQuery({ queryKey: ['plans'], queryFn: () => get('/plans') });
+
+export const usePlan = (id) => useQuery({ queryKey: ['plans', id], queryFn: () => get(`/plans/${id}`), enabled: Boolean(id) });
+
+export const useCreatePlan = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => api.post('/plans', body).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['plans'] });
+      qc.invalidateQueries({ queryKey: ['insights'] });
+    },
+  });
+};
+
+export const useTogglePlanTask = (planId) => {
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: ({ taskId, done }) => api.patch(`/plans/${planId}/tasks/${taskId}`, { done }).then((r) => r.data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['plans'] });
+      qc.invalidateQueries({ queryKey: ['insights'] });
+    },
+  });
+
+  // Optimistic update applied synchronously in the click handler: a controlled
+  // checkbox would otherwise flicker back for a tick before onMutate runs.
+  const mutate = ({ taskId, done }) => {
+    const setDone = (t) => (t._id === taskId ? { ...t, done } : t);
+    qc.setQueryData(['plans', planId], (plan) => plan && {
+      ...plan,
+      days: plan.days.map((d) => ({ ...d, tasks: d.tasks.map(setDone) })),
+    });
+    qc.setQueryData(['insights', 'overview'], (o) => o?.todaysPlan && {
+      ...o,
+      todaysPlan: { ...o.todaysPlan, tasks: o.todaysPlan.tasks.map(setDone) },
+    } || o);
+    mutation.mutate({ taskId, done });
+  };
+
+  return { ...mutation, mutate };
+};
+
+export const useDeletePlan = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/plans/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['plans'] });
+      qc.invalidateQueries({ queryKey: ['insights'] });
+    },
   });
 };

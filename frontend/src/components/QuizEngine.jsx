@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, XCircle, ChevronRight, Trophy, RefreshCcw, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronRight, Trophy, RefreshCcw, Loader2, Printer } from 'lucide-react';
 import { checkQuizAnswer, useSubmitQuiz, useQuizAttempts } from '../api/hooks';
 
 // Fill-in and short-answer questions are typed, not picked from options
@@ -175,9 +175,15 @@ const QuizEngine = ({ quiz }) => {
           {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
           <button
             onClick={handleRetake}
-            className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-indigo-700 transition-all cursor-pointer"
+            className="print:hidden inline-flex items-center gap-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-indigo-700 transition-all cursor-pointer"
           >
             <RefreshCcw size={18} /> Retake Quiz
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="print:hidden inline-flex items-center gap-2 ml-3 py-3 px-5 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-gray-600 dark:text-gray-300 cursor-pointer"
+          >
+            <Printer size={18} /> Print / Save PDF
           </button>
         </div>
 

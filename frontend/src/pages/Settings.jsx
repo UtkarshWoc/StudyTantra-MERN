@@ -7,6 +7,7 @@ import {
   Sun,
   Monitor,
   CheckCircle2,
+  GraduationCap,
   Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -93,11 +94,56 @@ const SessionsCard = () => {
   );
 };
 
+const StudySettings = () => {
+  const { user, updatePreferences } = useAuth();
+  const prefs = user?.preferences || {};
+  const [form, setForm] = useState({ dailyGoal: prefs.dailyGoal ?? 20, newCardsPerDay: prefs.newCardsPerDay ?? 20, timezone: prefs.timezone || 'UTC' });
+  const [status, setStatus] = useState({ saving: false, error: '', saved: false });
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const save = async (e) => {
+    e.preventDefault();
+    setStatus({ saving: true, error: '', saved: false });
+    const res = await updatePreferences({ dailyGoal: Number(form.dailyGoal), newCardsPerDay: Number(form.newCardsPerDay), timezone: form.timezone });
+    setStatus({ saving: false, error: res.success ? '' : res.error, saved: res.success });
+  };
+
+  return (
+    <form onSubmit={save} className="space-y-5 max-w-md">
+      <div>
+        <label htmlFor="pref-goal" className="text-sm font-medium text-gray-700 dark:text-gray-300">Daily review goal (cards)</label>
+        <input id="pref-goal" type="number" min={1} max={500} value={form.dailyGoal} onChange={(e) => setForm({ ...form, dailyGoal: e.target.value })} className={`${inputClass} mt-1.5`} />
+      </div>
+      <div>
+        <label htmlFor="pref-new" className="text-sm font-medium text-gray-700 dark:text-gray-300">New flashcards per day</label>
+        <input id="pref-new" type="number" min={0} max={200} value={form.newCardsPerDay} onChange={(e) => setForm({ ...form, newCardsPerDay: e.target.value })} className={`${inputClass} mt-1.5`} />
+        <p className="text-xs text-gray-500 mt-1">How many never-seen cards spaced repetition introduces each day.</p>
+      </div>
+      <div>
+        <label htmlFor="pref-tz" className="text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
+        <div className="flex gap-2 mt-1.5">
+          <input id="pref-tz" value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} className={inputClass} />
+          {browserTz && browserTz !== form.timezone && (
+            <button type="button" onClick={() => setForm({ ...form, timezone: browserTz })} className="whitespace-nowrap px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">Use {browserTz}</button>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">Used for streaks and your daily goal.</p>
+      </div>
+      {status.error && <p className="text-sm text-red-500">{status.error}</p>}
+      {status.saved && <p className="text-sm text-emerald-500 flex items-center gap-1.5"><CheckCircle2 size={16} /> Saved.</p>}
+      <button type="submit" disabled={status.saving} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl disabled:opacity-50 cursor-pointer">
+        {status.saving && <Loader2 size={16} className="animate-spin" />} Save
+      </button>
+    </form>
+  );
+};
+
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('appearance');
+  const [activeTab, setActiveTab] = useState('study');
   const { theme, setTheme } = useTheme();
 
   const tabs = [
+    { id: 'study', label: 'Study', icon: <GraduationCap size={18} /> },
     { id: 'appearance', label: 'Appearance', icon: <Palette size={18} /> },
     { id: 'security', label: 'Security', icon: <Shield size={18} /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
@@ -138,6 +184,16 @@ const Settings = () => {
           </aside>
 
           <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 w-full min-h-[400px] transition-colors duration-200">
+            {activeTab === 'study' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="border-b border-gray-100 dark:border-gray-700 pb-5">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Study</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Daily goal, spaced repetition and timezone.</p>
+                </div>
+                <StudySettings />
+              </div>
+            )}
+
             {activeTab === 'appearance' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="border-b border-gray-100 dark:border-gray-700 pb-5">
