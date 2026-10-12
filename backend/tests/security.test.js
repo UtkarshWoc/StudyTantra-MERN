@@ -37,15 +37,44 @@ describe('google sign-in', () => {
     expect(res.body.user).toMatchObject({ email: 'new@gmail.com', emailVerified: true, hasPassword: false, googleLinked: true });
   });
 
-  it('defeats account pre-hijacking: an unverified squatter loses password and sessions', async () => {
+  it('defeats account pre-hijacking: the real owner gets a fresh account, never the squatter one', async () => {
     const squatter = await h.registerUser({ email: 'victim@gmail.com', password: 'attacker-pass' });
 
     const res = await googleLogin('victim@gmail.com').expect(200);
-    expect(res.body.user.hasPassword).toBe(false);
+    expect(res.body.user._id).not.toBe(squatter.user._id);
+    expect(res.body.user).toMatchObject({ email: 'victim@gmail.com', hasPassword: false });
 
+    // The squatter's password no longer opens anything at the victim's address,
+    // and their own (now email-less) account is not the victim's.
     await h.api().post('/api/auth/login').send({ email: 'victim@gmail.com', password: 'attacker-pass' }).expect(401);
-    await h.api().get('/api/auth/me').set(h.auth(squatter.token)).expect(401);
-    await h.api().post('/api/auth/refresh').set('Cookie', squatter.cookie).expect(401);
+    const squatterMe = await h.api().get('/api/auth/me').set(h.auth(squatter.token)).expect(200);
+    expect(squatterMe.body.user.email).not.toBe('victim@gmail.com');
+  });
+
+  it('an attacker cannot attach a victim email to an account they control', async () => {
+    // Attacker has a Google-linked account of their own and a password
+    const attacker = await h.registerUser({ email: 'attacker@example.com' });
+    await h.api().put('/api/auth/profile').set(h.auth(attacker.token))
+      .send({ email: 'victim2@gmail.com', currentPassword: attacker.password }).expect(200);
+
+    // Unverified change: the account still has the attacker's address
+    const me = await h.api().get('/api/auth/me').set(h.auth(attacker.token)).expect(200);
+    expect(me.body.user.email).toBe('attacker@example.com');
+
+    // Victim signs in with Google and gets their own, separate account
+    const victim = await googleLogin('victim2@gmail.com').expect(200);
+    expect(victim.body.user._id).not.toBe(attacker.user._id);
+
+    // The pending change can no longer be completed onto the victim's address
+    const link = testOutbox.find((m) => m.to === 'victim2@gmail.com');
+    const token = decodeURIComponent(link.text.match(/token=([^\s&]+)/)[1]);
+    await h.api().post('/api/auth/verify-email').send({ token }).expect(409);
+  });
+
+  it('refuses to link a verified account that already has another Google identity', async () => {
+    const { User } = await import('../src/models/User.js').then((m) => ({ User: m.default }));
+    await User.create({ name: 'Linked', email: 'linked@gmail.com', googleId: 'some-other-sub', emailVerified: true });
+    await googleLogin('linked@gmail.com').expect(409);
   });
 
   it('links to a verified account without touching its password', async () => {

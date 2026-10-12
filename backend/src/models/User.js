@@ -26,6 +26,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Requested new email; replaces `email` only after it is verified
+  pendingEmail: {
+    type: String,
+    lowercase: true,
+    trim: true,
+  },
   emailVerificationTokenHash: String,
   emailVerificationExpires: Date,
   passwordResetTokenHash: String,
@@ -51,6 +57,7 @@ userSchema.methods.toPublicJSON = function () {
     name: this.name,
     email: this.email,
     emailVerified: this.emailVerified,
+    pendingEmail: this.pendingEmail || null,
     hasPassword: Boolean(this.password),
     googleLinked: Boolean(this.googleId),
     createdAt: this.createdAt,

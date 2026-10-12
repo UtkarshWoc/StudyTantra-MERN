@@ -126,13 +126,19 @@ describe('email verification & password reset', () => {
 });
 
 describe('profile & account', () => {
-  it('requires the current password to change email', async () => {
-    const { token, password } = await registerUser();
+  it('changes email only after the new address is verified (and needs the current password)', async () => {
+    const { token, password, email } = await registerUser();
     await api().put('/api/auth/profile').set(auth(token)).send({ email: 'new@example.com' }).expect(400);
+
+    testOutbox.length = 0;
     const res = await api().put('/api/auth/profile').set(auth(token))
       .send({ email: 'new@example.com', currentPassword: password }).expect(200);
-    expect(res.body.user.email).toBe('new@example.com');
-    expect(res.body.user.emailVerified).toBe(false);
+    expect(res.body.user.email).toBe(email);
+    expect(res.body.user.pendingEmail).toBe('new@example.com');
+    expect(testOutbox[0].to).toBe('new@example.com');
+
+    const verified = await api().post('/api/auth/verify-email').send({ token: tokenFromEmail(testOutbox[0]) }).expect(200);
+    expect(verified.body.user).toMatchObject({ email: 'new@example.com', emailVerified: true, pendingEmail: null });
   });
 
   it('will not change email to one that is taken', async () => {

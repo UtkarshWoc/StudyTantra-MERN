@@ -19,12 +19,14 @@ const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
 const RECENT_LOGIN_MS = 15 * 60 * 1000;
 
+// Sends a verification link to the address being proven: a pending email
+// change if there is one, otherwise the account's current email.
 const issueVerification = async (user) => {
   const token = randomToken();
   user.emailVerificationTokenHash = hashToken(token);
   user.emailVerificationExpires = new Date(Date.now() + VERIFY_TTL_MS);
   await user.save();
-  await sendVerificationEmail(user, token);
+  await sendVerificationEmail(user, token, user.pendingEmail || user.email);
 };
 
 // @desc    Register a new user
@@ -73,24 +75,36 @@ export const googleAuth = async (req, res) => {
   if (!payload?.email || !payload.email_verified) throw unauthorized('Your Google email is not verified');
 
   const email = payload.email.toLowerCase();
-  let user = await User.findOne({ googleId: payload.sub }) || await User.findOne({ email });
 
-  if (user) {
-    if (!user.emailVerified) {
-      // Whoever created this account never proved they own the address, but
-      // Google just did. Drop their password and sessions so a pre-registered
-      // ("pre-hijacked") account can't be used to spy on the real owner.
-      user.password = undefined;
-      user.tokenVersion += 1;
-      user.passwordResetTokenHash = undefined;
-      user.passwordResetExpires = undefined;
-      await revokeAllSessions(user._id);
+  // 1. This Google identity is already linked to an account: sign in to it.
+  let user = await User.findOne({ googleId: payload.sub });
+
+  if (!user) {
+    const existing = await User.findOne({ email });
+
+    if (existing?.emailVerified) {
+      // 2. A verified account owns this email. Link it, unless it is already
+      //    linked to a different Google identity.
+      if (existing.googleId && existing.googleId !== payload.sub) {
+        throw conflict('This email is linked to a different Google account');
+      }
+      existing.googleId = payload.sub;
+      await existing.save();
+      user = existing;
+    } else {
+      if (existing) {
+        // 3. Someone claimed this email without ever proving ownership (a
+        //    possible pre-hijack). Never merge into that account: release the
+        //    address from it and give the real owner a fresh account.
+        existing.email = `unclaimed+${existing._id}@invalid.studytantra`;
+        existing.emailVerificationTokenHash = undefined;
+        existing.emailVerificationExpires = undefined;
+        existing.passwordResetTokenHash = undefined;
+        existing.passwordResetExpires = undefined;
+        await existing.save();
+      }
+      user = await User.create({ name: payload.name || email.split('@')[0], email, googleId: payload.sub, emailVerified: true });
     }
-    user.googleId ??= payload.sub;
-    user.emailVerified = true;
-    await user.save();
-  } else {
-    user = await User.create({ name: payload.name || email.split('@')[0], email, googleId: payload.sub, emailVerified: true });
   }
 
   res.json(await startSession(req, res, user));
@@ -143,6 +157,17 @@ export const verifyEmail = async (req, res) => {
   });
   if (!user) throw badRequest('This verification link is invalid or has expired');
 
+  if (user.pendingEmail) {
+    // An email change only takes effect once the new address is proven.
+    if (await User.exists({ email: user.pendingEmail, _id: { $ne: user._id } })) {
+      throw conflict('An account with this email already exists');
+    }
+    user.email = user.pendingEmail;
+    user.pendingEmail = undefined;
+    // Reset links sent to the old address must stop working
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetExpires = undefined;
+  }
   user.emailVerified = true;
   user.emailVerificationTokenHash = undefined;
   user.emailVerificationExpires = undefined;
@@ -155,7 +180,7 @@ export const verifyEmail = async (req, res) => {
 // @access  Private
 export const resendVerification = async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (user.emailVerified) return res.json({ message: 'Email already verified' });
+  if (user.emailVerified && !user.pendingEmail) return res.json({ message: 'Email already verified' });
   await issueVerification(user);
   res.json({ message: 'Verification email sent' });
 };
@@ -185,6 +210,11 @@ export const resetPassword = async (req, res) => {
   });
   if (!user) throw badRequest('This reset link is invalid or has expired');
 
+  if (!user.emailVerified) {
+    // The reset proves control of an address this account never verified; a
+    // Google identity linked by whoever created it can't be trusted.
+    user.googleId = undefined;
+  }
   user.password = req.body.password;
   user.passwordResetTokenHash = undefined;
   user.passwordResetExpires = undefined;
@@ -197,32 +227,31 @@ export const resetPassword = async (req, res) => {
   res.json({ message: 'Password updated. Please sign in.' });
 };
 
-// @desc    Update user profile (name, email). Changing email requires the current password.
+// @desc    Update name, or request an email change. The new email only replaces
+//          the current one after it is verified, and requires the current password.
 // @route   PUT /api/auth/profile
 // @access  Private
 export const updateUserProfile = async (req, res) => {
   const user = await User.findById(req.user._id);
   const { name, email, currentPassword } = req.body;
+  let message = 'Profile updated';
 
   if (name) user.name = name;
 
   if (email && email !== user.email) {
     if (!(await user.matchPassword(currentPassword))) {
-      throw badRequest(user.password ? 'Enter your current password to change your email' : 'Set a password before changing your email');
+      throw badRequest(user.password ? 'Enter your current password to change your email' : 'Use "Forgot password" to set a password before changing your email');
     }
     if (await User.exists({ email, _id: { $ne: user._id } })) {
       throw conflict('An account with this email already exists');
     }
-    user.email = email;
-    user.emailVerified = false;
-    // Reset links sent to the old address must stop working
-    user.passwordResetTokenHash = undefined;
-    user.passwordResetExpires = undefined;
+    user.pendingEmail = email;
     await issueVerification(user);
+    message = `We sent a confirmation link to ${email}. Your email changes once you open it.`;
   }
 
   await user.save();
-  res.json({ user: user.toPublicJSON() });
+  res.json({ message, user: user.toPublicJSON() });
 };
 
 // @desc    Change the password. Signs out other devices.

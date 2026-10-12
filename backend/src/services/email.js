@@ -41,10 +41,10 @@ const layout = (title, body, cta) => `
   <p style="font-size:12px;color:#64748b">If the button doesn't work, open this link: ${escapeHtml(cta.url)}</p>
 </div>`;
 
-export const sendVerificationEmail = (user, token) => {
+export const sendVerificationEmail = (user, token, to = user.email) => {
   const url = `${env.CLIENT_URL}/verify-email?token=${encodeURIComponent(token)}`;
   return sendEmail({
-    to: user.email,
+    to,
     subject: 'Verify your StudyTantra email',
     text: `Hi ${user.name}, verify your email: ${url}`,
     html: layout('Verify your email', `Hi ${user.name}, confirm this is your email address to secure your account.`, { url, label: 'Verify email' }),
