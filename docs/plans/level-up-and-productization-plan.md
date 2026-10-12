@@ -7,6 +7,9 @@ The user asked for: (1) a plan to take the project a level further, (2) what it 
 
 ---
 
+> **Status (2026-10-12):** Phases 0–3 implemented on branch `feature/level-up` (see commit history). Phase 4 not started.
+> Deviations from the plan: retrieval scores embeddings in-app by default (Atlas Vector Search optional via `VECTOR_SEARCH=atlas`); ingestion uses an in-process queue rather than BullMQ/Redis; Playwright covers two end-to-end flows.
+
 ## Phase 0 — Fix what's broken (1 week)
 
 Real bugs found in the code:

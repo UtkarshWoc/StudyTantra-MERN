@@ -1,4 +1,4 @@
-### StudyTantra – AI Learning Assistant (MERN + Google Gemini)
+# StudyTantra – AI Learning Assistant (MERN + Google Gemini)
 
 StudyTantra is a full-stack **AI-powered learning assistant** built with the **MERN stack** and **Google Gemini**.  
 It transforms static PDFs into an interactive study experience with **AI chat**, **auto‑generated flashcards**, **quizzes**, **summaries**, and **progress tracking** — all in one place.
@@ -24,124 +24,129 @@ Students today rely heavily on **PDF notes, e‑books, and handouts**, but:
 
 ---
 
-## ✨ Core Features
+## ✨ Features
 
-1. **User Authentication (JWT)**
-   - Secure **login** and **signup**
-   - JSON Web Token–based authentication
-   - Protected routes on both frontend and backend
+**Documents**
+- Upload PDFs (private storage; files are only served to their owner)
+- Background processing: per-page text extraction, OCR for scanned PDFs, chunking and embeddings, with live status
+- In-app PDF viewer; select text to **Explain**, **Simplify**, **Make a flashcard** or **Ask in chat**
+- Collections (e.g. "Semester 5 – DBMS") to group documents
 
-2. **PDF Upload & Management**
-   - Upload PDFs from the dashboard
-   - Store file metadata (size, pages, title, owner)
-   - View, delete, and manage documents per user
+**AI study tools (Google Gemini)**
+- Chat grounded in your document (retrieval-augmented), streamed live, with **page citations** that jump the viewer
+- Cross-document chat and quizzes over a whole collection
+- Summaries, flashcards and quizzes from the whole document, a page range, or a topic; choose difficulty
+- Quiz types: multiple choice, true/false, fill-in-the-blank, short answer (graded by AI with feedback)
 
-3. **Embedded PDF Viewer**
-   - Read documents **inside the app**
-   - No need to download / open in external viewer
-   - Works together with AI chat and other tabs
+**Learning science**
+- Spaced repetition (FSRS) review with Again/Hard/Good/Easy and a daily new-card limit
+- Quiz attempt history; **weak topics** from quiz answers and flashcard lapses, with one-click practice
+- Streaks, daily goal and a year-long activity heatmap
+- Exam **study planner**: a day-by-day plan up to your exam date that prioritises weak topics
+- Export flashcards to CSV / Anki; print or save quiz reviews and summaries as PDF
 
-4. **AI‑Powered Chat (Google Gemini)**
-   - Ask questions **about a specific PDF**
-   - Context‑aware responses based on document content
-   - Chat history stored per document & per user
-
-5. **AI Document Summary**
-   - One‑click **summaries** of entire documents
-   - Helps quickly revise or decide what to read in detail
-
-6. **AI Concept Explainer**
-   - Highlight a topic / phrase and ask for explanations
-   - Get detailed, simplified breakdowns of complex concepts
-
-7. **Auto‑Generated Flashcards**
-   - AI generates smart **Q/A flashcards** from your document
-   - Flip animation & clean UI for active recall
-   - Filter favourites, track which you’ve reviewed
-
-8. **AI Quiz Generator**
-   - Generate **multiple‑choice quizzes** from document content
-   - Configurable number of questions
-   - Stores correct answer with explanation
-
-9. **Quiz Results & Analytics**
-   - See score breakdown per attempt
-   - View correct/incorrect answers and detailed explanations
-   - Track improvement over multiple attempts
-
-10. **Progress Tracking Dashboard**
-    - Overview cards:
-      - Total documents
-      - Total flashcards
-      - Total quizzes and average score
-    - Recent activity feed (uploads, quizzes, chats)
-
-11. **Favorites System**
-    - Mark important flashcards / documents as favourites
-    - Quick access for revision sessions
-
-12. **Responsive, Modern UI**
-    - Built with **React + Tailwind CSS**
-    - Mobile‑friendly layout, dark‑mode friendly design (optional)
-    - Clean, dashboard‑style experience
+**Accounts**
+- Email + password or Google sign-in, email verification, password reset
+- Short-lived access tokens with rotating refresh sessions; "log out other devices"
+- Change password, change email (after verifying the new address), delete account (removes all data)
 
 ---
 
 ## 🧱 Tech Stack
 
-### Frontend (`/study-dashboard`)
-
-- **React** (with **Vite**)
-- **React Router** (for SPA routing)
-- **Tailwind CSS** (utility‑first styling)
-- Optional libraries:
-  - Icon set (e.g. Lucide, Heroicons)
-  - Charting (Recharts / Chart.js) for dashboards
-  - `react-pdf` for PDF viewing
-
-### Backend (planned)
-
-- **Node.js** + **Express.js**
-- **MongoDB** with **Mongoose**
-- **JWT** for authentication
-- File storage:
-  - Local uploads folder **or**
-  - Cloud storage (Cloudinary, AWS S3, etc.)
-
-### AI / LLM
-
-- **Google Gemini API**
-- Node.js SDK or REST HTTP client
-- Prompt engineering for:
-  - Summaries
-  - Concept explanations
-  - Flashcard generation
-  - Quiz generation
-  - Chat responses
+| Layer | Tech |
+|---|---|
+| Frontend | React 19, Vite, Tailwind CSS 4, React Router, TanStack Query, react-pdf, react-markdown |
+| Backend | Node.js 20+, Express 5, MongoDB + Mongoose, zod validation, pino logging |
+| AI | Google Gemini via `@google/genai` (generation, structured JSON output, embeddings, streaming) |
+| Storage | Cloudinary (authenticated delivery) or local disk |
+| Learning | `ts-fsrs` for spaced repetition |
+| Testing | Vitest + Supertest + mongodb-memory-server, Testing Library, Playwright |
+| Ops | GitHub Actions CI, optional Sentry, Railway (API) + Vercel (web) |
 
 ---
 
-## 📂 Project Structure (planned)
-
-High‑level structure:
+## 📂 Project Structure
 
 ```text
-StudyTantra-MERN-1/
-  ├─ readme.md                 # Project-level README (this file)
-  ├─ backend/                  # Node + Express + MongoDB (planned)
-  │   ├─ src/
-  │   │   ├─ models/           # User, Document, Flashcard, Quiz, ChatHistory
-  │   │   ├─ routes/           # Auth, documents, AI, flashcards, quizzes, dashboard
-  │   │   ├─ controllers/
-  │   │   ├─ middlewares/      # auth, error handling
-  │   │   └─ utils/            # AI, PDF processing, helpers
-  │   └─ ...
-  └─ study-dashboard/          # React frontend (Vite + Tailwind)
-      ├─ src/
-      │   ├─ pages/            # Login, Register, Dashboard, Document, Quiz, Profile, etc.
-      │   ├─ components/       # Navbar, Cards, Chat UI, Flashcard, Charts, etc.
-      │   ├─ hooks/            # auth, API, etc.
-      │   ├─ lib/              # API client, constants
-      │   └─ ...
-      ├─ package.json
-      └─ ...
+backend/
+  src/
+    config/        env validation (zod), logger, db, cloudinary
+    controllers/   auth, documents, chat, flashcards, quizzes, review, insights, collections, plans
+    middlewares/   auth, validation, rate limits, errors, uploads
+    models/        User, Session, Document, DocumentPage, Chunk, Flashcard, Quiz, QuizAttempt,
+                   ChatHistory, Activity, Collection, StudyPlan
+    services/      ai/ (providers + prompts), ingestion/, retrieval, storage, srs, activity, email
+    routes/
+  scripts/         e2e-server.js (self-contained API for tests/demos), gemini-smoke.js
+  tests/           API test suites
+frontend/
+  src/
+    api/hooks.js   all data fetching (TanStack Query)
+    lib/           API client (silent token refresh), SSE chat stream, helpers
+    components/    PdfViewer, ChatInterface, QuizEngine, ActivityHeatmap, ...
+    pages/         Dashboard, Library, Document, Review, Flashcards, Quizzes, Planner, ...
+  e2e/             Playwright specs
+docs/plans/        roadmap and productization plan
+```
+
+---
+
+## 🚀 Getting Started
+
+Requirements: Node.js 20+, a MongoDB database (local or Atlas), a [Gemini API key](https://aistudio.google.com/apikey).
+
+```bash
+# Backend
+cd backend
+cp .env.example .env        # fill in MONGO_URI, JWT_SECRET, GEMINI_API_KEY, Cloudinary keys
+npm install --workspaces=false
+npm run dev                  # http://localhost:5000
+
+# Frontend (new terminal)
+cd frontend
+cp .env.example .env         # VITE_API_URL=http://localhost:5000
+npm install --workspaces=false
+npm run dev                  # http://localhost:5173
+```
+
+> Each package has its own lockfile, so install with `--workspaces=false` (the repo root declares workspaces).
+
+**No API keys handy?** Set `AI_PROVIDER=mock` and `STORAGE_DRIVER=local` in `backend/.env` to run fully offline with deterministic AI responses. Or start the self-contained API (in-memory MongoDB + mock AI) with `node backend/scripts/e2e-server.js` and point the frontend at `http://localhost:5055`.
+
+The server validates its environment at startup and exits with a clear message if something required is missing. See `backend/.env.example` for every variable (email via Resend, Google sign-in, Sentry, rate limits, Atlas Vector Search).
+
+---
+
+## 🧪 Testing
+
+```bash
+cd backend  && npm test               # API tests (in-memory MongoDB, mock AI)
+cd frontend && npm test               # unit/component tests
+cd frontend && npm run lint
+cd frontend && npm run test:e2e       # Playwright; starts the e2e API and Vite automatically
+cd backend  && npm run smoke:gemini   # optional: a few real Gemini calls with your key
+```
+
+CI (`.github/workflows/ci.yml`) runs all of the above except the Gemini smoke test on every pull request.
+
+---
+
+## ☁️ Deployment notes
+
+**Backend (Railway):** set `NODE_ENV=production`, all variables from `.env.example`, and `CLIENT_URL` to the frontend URL (used in email links). `GET /healthz` reports 503 until MongoDB is connected. Documents uploaded before the ingestion pipeline existed are processed automatically on the next boot.
+
+**Frontend (Vercel):** set `VITE_API_URL` (and optionally `VITE_GOOGLE_CLIENT_ID`, `VITE_SENTRY_DSN`).
+
+**⚠️ Serve the API from the same site as the frontend.** Sessions use an httpOnly refresh cookie. If the frontend is on `*.vercel.app` and the API on `*.railway.app`, that cookie is a third-party cookie, which Safari (and Chrome, as third-party cookies are phased out) can block, and users would be signed out on every reload. Either:
+- put both behind your own domain (e.g. `app.example.com` + `api.example.com`), or
+- proxy the API through Vercel by adding this to `frontend/vercel.json` (before the SPA rewrite) and setting `VITE_API_URL` to the Vercel site's own origin:
+  `{ "source": "/api/(.*)", "destination": "https://<your-railway-app>/api/$1" }`
+
+**Scaling retrieval:** chunks are scored in Node by default. For large libraries create an Atlas Vector Search index named `chunk_embeddings` on `chunks.embedding` (768 dims, cosine, filter field `document`) and set `VECTOR_SEARCH=atlas`. Background ingestion runs in-process; with multiple API instances, move it to a shared queue.
+
+---
+
+## 🗺️ Roadmap
+
+See [`docs/plans/level-up-and-productization-plan.md`](docs/plans/level-up-and-productization-plan.md). Phases 0–3 (fixes, engineering foundation, RAG, learning science) are implemented; Phase 4 (productization: pricing, quotas, onboarding, PWA, legal) is next.
