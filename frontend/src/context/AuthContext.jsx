@@ -1,138 +1,118 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-
-export const AuthContext = createContext(null);
-export const useAuth = () => useContext(AuthContext);
-
-const API_URL = `${import.meta.env.VITE_API_URL}/api/auth`;
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { AuthContext } from './auth';
+import { api, refreshSession, setAccessToken, setSessionExpiredHandler, getErrorMessage } from '../lib/api';
 
 export const AuthProvider = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const clearSession = useCallback(() => {
+    setAccessToken(null);
+    setUser(null);
+    queryClient.clear();
+  }, [queryClient]);
 
-  // 401 interceptor: on expired token, clear session and redirect
+  // When a refresh fails mid-session, drop to signed-out; ProtectedRoute redirects to /login.
   useEffect(() => {
-    const id = axios.interceptors.response.use(
-      r => r,
-      err => {
-        // A 401 from login/register just means bad credentials — let the form show it.
-        const isAuthAttempt = /\/api\/auth\/(login|register)$/.test(err.config?.url || '');
-        if (err.response?.status === 401 && !isAuthAttempt) {
-          setUser(null);
-          localStorage.removeItem('userInfo');
-          window.location.href = '/login';
-        }
-        return Promise.reject(err);
-      }
-    );
-    return () => axios.interceptors.response.eject(id);
-  }, [setUser]);
+    setSessionExpiredHandler(clearSession);
+  }, [clearSession]);
 
-  // On mount, check localStorage for an existing session
+  // Restore the session from the httpOnly refresh cookie on load.
   useEffect(() => {
-    const storedUserInfo = localStorage.getItem('userInfo');
-    if (storedUserInfo) {
-      try {
-        const parsed = JSON.parse(storedUserInfo);
-        if (parsed.token && typeof parsed.token === 'string') {
-          try {
-            // JWT payloads are base64url; atob needs standard base64 (Buffer doesn't exist in browsers)
-            const b64 = parsed.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-            const payload = JSON.parse(atob(b64));
-            if (payload.exp && payload.exp * 1000 < Date.now()) {
-              localStorage.removeItem('userInfo');
-              setUser(null);
-            } else {
-              setUser(parsed);
-            }
-          } catch {
-            setUser(parsed);
-          }
-        } else {
-          setUser(parsed);
-        }
-      } catch {
-        localStorage.removeItem('userInfo');
-      }
-    }
-    setLoading(false);
+    localStorage.removeItem('userInfo'); // tokens used to be stored here; never again
+    refreshSession()
+      .then((data) => setUser(data.user))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Login
-  const login = async (email, password) => {
+  const startSession = useCallback((data) => {
+    setAccessToken(data.accessToken);
+    setUser(data.user);
+    return { success: true, data };
+  }, []);
+
+  const authCall = useCallback(async (request, fallback) => {
     try {
-      const { data } = await axios.post(`${API_URL}/login`, { email, password });
-      setUser(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
+      const { data } = await request();
+      return startSession(data);
+    } catch (error) {
+      return { success: false, error: getErrorMessage(error, fallback) };
+    }
+  }, [startSession]);
+
+  const login = useCallback((email, password) =>
+    authCall(() => api.post('/auth/login', { email, password }), 'Invalid email or password.'), [authCall]);
+
+  const register = useCallback((name, email, password) =>
+    authCall(() => api.post('/auth/register', { name, email, password }), 'Registration failed.'), [authCall]);
+
+  const loginWithGoogle = useCallback((credential) =>
+    authCall(() => api.post('/auth/google', { credential }), 'Google sign-in failed.'), [authCall]);
+
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Signing out locally still matters even if the server call fails
+    }
+    clearSession();
+  }, [clearSession]);
+
+  const refreshUser = useCallback(async () => {
+    const { data } = await api.get('/auth/me');
+    setUser(data.user);
+    return data.user;
+  }, []);
+
+  const updateProfile = useCallback(async (name, email, currentPassword) => {
+    try {
+      const { data } = await api.put('/auth/profile', { name, email, currentPassword });
+      setUser(data.user);
       return { success: true, data };
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Invalid email or password.',
-      };
+      return { success: false, error: getErrorMessage(error) };
     }
-  };
+  }, []);
 
-  // Register
-  const register = async (name, email, password) => {
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
     try {
-      const { data } = await axios.post(`${API_URL}/register`, { name, email, password });
-      setUser(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
-      return { success: true, data };
+      const { data } = await api.put('/auth/password', { currentPassword, newPassword });
+      // Other sessions were revoked and old tokens invalidated; keep this one alive.
+      setAccessToken(data.accessToken);
+      setUser(data.user);
+      return { success: true };
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Registration failed.',
-      };
+      return { success: false, error: getErrorMessage(error, 'Could not update password.') };
     }
-  };
+  }, []);
 
-  // Logout
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('userInfo');
-  };
-
-  // Update profile
-  const updateProfile = async (name, email, currentPassword) => {
-    if (!user || (!name && !email)) return { success: false, error: 'Nothing to update' };
-
+  const deleteAccount = useCallback(async (password, confirm) => {
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-
-      const { data } = await axios.put(`${API_URL}/profile`, { name, email, currentPassword }, config);
-      setUser(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
-      return { success: true, data };
+      await api.delete('/auth/account', { data: { password, confirm } });
+      clearSession();
+      return { success: true };
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message,
-      };
+      return { success: false, error: getErrorMessage(error, 'Could not delete account.') };
     }
-  };
+  }, [clearSession]);
+
+  const value = useMemo(() => ({
+    user, setUser, login, register, loginWithGoogle, logout, refreshUser, updateProfile, changePassword, deleteAccount,
+  }), [user, login, register, loginWithGoogle, logout, refreshUser, updateProfile, changePassword, deleteAccount]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-[#0b1120]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</p>
+          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium text-slate-400">Loading...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <AuthContext.Provider value={{ user, setUser, login, register, logout, updateProfile }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

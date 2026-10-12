@@ -1,27 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Folder, Layers, Sparkles, UploadCloud, Loader2, FileText, ArrowUpRight } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import React from 'react';
+import { Folder, Layers, Sparkles, UploadCloud, Loader2, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDashboard } from '../api/hooks';
+
+const EMPTY = { metrics: { totalDocuments: 0, totalFlashcards: 0, totalQuizzes: 0, averageScore: 0 }, recentActivity: [] };
 
 const Dashboard = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ metrics: { totalDocuments: 0, totalFlashcards: 0, totalQuizzes: 0, averageScore: 0 }, recentActivity: [] });
-  const [loading, setLoading] = useState(true);
+  const { data: stats = EMPTY, isLoading: loading, isError } = useDashboard();
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      if (!user) return;
-      try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard`, { headers: { Authorization: `Bearer ${user.token}` } });
-        if (data.metrics) setStats(data);
-      } catch (e) { console.error('Dashboard error', e); }
-      finally { setLoading(false); }
-    };
-    fetchDashboard();
-  }, [user]);
-
+  if (isError) return (<div className="text-center py-16 text-slate-400">Could not load your dashboard. Please refresh.</div>);
   if (loading) return (<div className="flex flex-col items-center justify-center py-16 text-slate-500"><Loader2 className="animate-spin mb-4 text-amber-500" size={36} /><p className="font-medium">Loading overview...</p></div>);
 
   const { metrics, recentActivity } = stats;

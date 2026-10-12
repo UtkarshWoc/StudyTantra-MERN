@@ -9,16 +9,25 @@ import {
   CheckCircle2,
   Loader2
 } from 'lucide-react';
-import axios from 'axios';
-import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import { useTheme } from '../context/theme';
+import { useAuth } from '../context/auth';
+import { api, getErrorMessage } from '../lib/api';
 
 const inputClass = "w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none";
 
 const ChangePasswordForm = () => {
-  const { user } = useAuth();
+  const { user, changePassword } = useAuth();
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' });
   const [status, setStatus] = useState({ saving: false, error: '', success: false });
+
+  if (!user?.hasPassword) {
+    return (
+      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+        You sign in with Google. To also sign in with a password, use <Link to="/forgot-password" className="text-indigo-600 dark:text-indigo-400 font-semibold underline">Forgot password</Link> and we will email you a link to set one.
+      </p>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,14 +35,12 @@ const ChangePasswordForm = () => {
     if (form.newPassword !== form.confirm) return setStatus({ saving: false, error: 'New passwords do not match.', success: false });
 
     setStatus({ saving: true, error: '', success: false });
-    try {
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/auth/password`,
-        { currentPassword: form.currentPassword, newPassword: form.newPassword },
-        { headers: { Authorization: `Bearer ${user.token}` } });
+    const res = await changePassword(form.currentPassword, form.newPassword);
+    if (res.success) {
       setForm({ currentPassword: '', newPassword: '', confirm: '' });
       setStatus({ saving: false, error: '', success: true });
-    } catch (err) {
-      setStatus({ saving: false, error: err.response?.data?.message || 'Could not update password.', success: false });
+    } else {
+      setStatus({ saving: false, error: res.error, success: false });
     }
   };
 
@@ -46,7 +53,7 @@ const ChangePasswordForm = () => {
       <input type="password" autoComplete="new-password" placeholder="Confirm new password" value={form.confirm}
         onChange={(e) => setForm({ ...form, confirm: e.target.value })} className={inputClass} />
       {status.error && <p className="text-sm text-red-500">{status.error}</p>}
-      {status.success && <p className="text-sm text-emerald-500 flex items-center gap-1.5"><CheckCircle2 size={16} /> Password updated.</p>}
+      {status.success && <p className="text-sm text-emerald-500 flex items-center gap-1.5"><CheckCircle2 size={16} /> Password updated. Other devices were signed out.</p>}
       <button
         type="submit"
         disabled={status.saving || !form.currentPassword || !form.newPassword}
@@ -56,6 +63,33 @@ const ChangePasswordForm = () => {
         Update Password
       </button>
     </form>
+  );
+};
+
+const SessionsCard = () => {
+  const [state, setState] = useState({ loading: false, message: '', error: '' });
+
+  const logoutOthers = async () => {
+    setState({ loading: true, message: '', error: '' });
+    try {
+      const { data } = await api.post('/auth/logout-others');
+      setState({ loading: false, message: data.count ? `Signed out ${data.count} other session${data.count === 1 ? '' : 's'}.` : 'No other active sessions.', error: '' });
+    } catch (error) {
+      setState({ loading: false, message: '', error: getErrorMessage(error) });
+    }
+  };
+
+  return (
+    <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Active Sessions</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 mt-1">Sign out everywhere except this device.</p>
+      <button onClick={logoutOthers} disabled={state.loading} className="cursor-pointer px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
+        {state.loading && <Loader2 size={16} className="animate-spin" />}
+        Log out other devices
+      </button>
+      {state.message && <p className="text-sm text-emerald-500 mt-3">{state.message}</p>}
+      {state.error && <p className="text-sm text-red-500 mt-3">{state.error}</p>}
+    </div>
   );
 };
 
@@ -131,12 +165,13 @@ const Settings = () => {
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="border-b border-gray-100 dark:border-gray-700 pb-5">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Security</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your password.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your password and signed-in devices.</p>
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Change Password</h3>
                   <ChangePasswordForm />
                 </div>
+                <SessionsCard />
               </div>
             )}
 

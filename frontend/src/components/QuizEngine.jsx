@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, XCircle, ChevronRight, Trophy, RefreshCcw, Loader2 } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { checkQuizAnswer, useSubmitQuiz, useQuizAttempts } from '../api/hooks';
 
 const QuizEngine = ({ quiz }) => {
-  const { user } = useAuth();
   const [started, setStarted] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -24,40 +22,22 @@ const QuizEngine = ({ quiz }) => {
   const [error, setError] = useState('');
 
   const quizData = quiz?.questions || [];
-  const authHeaders = { headers: { Authorization: `Bearer ${user?.token}` } };
+  const submitQuiz = useSubmitQuiz(quiz?.document);
+  // For a previously attempted quiz, the answer key + latest attempt come from here
+  const { data: attemptsData } = useQuizAttempts(quiz?._id, Boolean(quiz?.attempted));
 
-  // Reset engine when quiz changes
-  useEffect(() => {
-    setStarted(false);
-    setCurrentQuestion(0);
-    setSelectedOption(null);
-    setIsSubmitted(false);
-    setUserAnswers([]);
-    setChecks([]);
-    setReviewQuestions(null);
-    setError('');
-    setScore(quiz?.score || 0);
-    setShowResults(quiz?.attempted || false);
-  }, [quiz]);
-
-  // For a previously attempted quiz, load the answer key + latest attempt for review
-  useEffect(() => {
-    if (!quiz?._id || !quiz.attempted || !user) return;
-    let cancelled = false;
-    axios.get(`${import.meta.env.VITE_API_URL}/api/quizzes/${quiz._id}/attempts`, authHeaders)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setReviewQuestions(data.quiz?.questions || null);
-        const latest = data.attempts?.[0];
-        if (latest) {
-          setUserAnswers(latest.answers.map(a => a.answer));
-          setScore(latest.score);
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quiz?._id, quiz?.attempted, user]);
+  // Parents render this with key={quiz._id}, so state resets per quiz.
+  // Show the latest stored attempt when reviewing a past quiz (not mid-retake)
+  const [syncedAttemptsData, setSyncedAttemptsData] = useState(null);
+  if (attemptsData && attemptsData !== syncedAttemptsData && !started) {
+    setSyncedAttemptsData(attemptsData);
+    setReviewQuestions(attemptsData.quiz?.questions || null);
+    const latest = attemptsData.attempts?.[0];
+    if (latest) {
+      setUserAnswers(latest.answers.map(a => a.answer));
+      setScore(latest.score);
+    }
+  }
 
   if (quizData.length === 0) {
     return (
@@ -81,8 +61,7 @@ const QuizEngine = ({ quiz }) => {
     setError('');
     try {
       // The answer key never reaches the client before answering; ask the server.
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/quizzes/${quiz._id}/check`,
-        { index: currentQuestion, answer: selectedOption }, authHeaders);
+      const data = await checkQuizAnswer(quiz._id, currentQuestion, selectedOption);
 
       const newAnswers = [...userAnswers];
       newAnswers[currentQuestion] = selectedOption;
@@ -122,8 +101,7 @@ const QuizEngine = ({ quiz }) => {
       // Quiz finished: the server grades and records the attempt
       setSubmittingToServer(true);
       try {
-        const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/quizzes/${quiz._id}/submit`,
-          { answers: userAnswers }, authHeaders);
+        const data = await submitQuiz.mutateAsync({ quizId: quiz._id, answers: userAnswers });
         setScore(data.score);
         setReviewQuestions(data.quiz?.questions || null);
       } catch (err) {

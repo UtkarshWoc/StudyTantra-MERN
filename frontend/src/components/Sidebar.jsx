@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, Layers, Target, Star, User, Settings, LogOut, Hexagon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 
 const nav = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -20,7 +20,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = async () => { await logout(); navigate('/login'); };
 
   return (
     <aside

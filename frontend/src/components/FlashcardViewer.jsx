@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { RotateCcw, Check, X as XIcon, Flame, AlertTriangle, RefreshCw } from 'lucide-react';
 
-const FlashcardViewer = ({ cards = [], onRestart }) => {
+const FlashcardViewer = ({ cards = [] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   

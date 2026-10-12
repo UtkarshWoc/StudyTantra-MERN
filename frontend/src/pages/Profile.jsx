@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, Trash2, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/auth';
+import { api, getErrorMessage } from '../lib/api';
+import { Mail, Lock, Trash2, Loader2, BadgeCheck, AlertCircle } from 'lucide-react';
 
 const inputClass = "w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-medium text-gray-800 dark:text-gray-200 shadow-inner";
 
 const DeleteAccount = () => {
-  const { user, logout } = useAuth();
+  const { user, deleteAccount } = useAuth();
   const navigate = useNavigate();
+  const needsPassword = user?.hasPassword;
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -19,15 +20,11 @@ const DeleteAccount = () => {
     e.preventDefault();
     setDeleting(true);
     setError('');
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/auth/account`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-        data: { password, confirm },
-      });
-      logout();
+    const res = await deleteAccount(needsPassword ? password : undefined, confirm);
+    if (res.success) {
       navigate('/login');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Could not delete account.');
+    } else {
+      setError(res.error);
       setDeleting(false);
     }
   };
@@ -49,11 +46,13 @@ const DeleteAccount = () => {
 
       {open && (
         <form onSubmit={handleDelete} className="mt-6 space-y-3 max-w-md">
-          <input type="password" autoComplete="current-password" placeholder="Your password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+          {needsPassword && (
+            <input type="password" autoComplete="current-password" placeholder="Your password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+          )}
           <input type="text" placeholder="Type DELETE to confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
           {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
           <div className="flex gap-3">
-            <button type="submit" disabled={deleting || confirm !== 'DELETE' || !password} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2">
+            <button type="submit" disabled={deleting || confirm !== 'DELETE' || (needsPassword && !password)} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2">
               {deleting && <Loader2 size={16} className="animate-spin" />}
               Permanently delete
             </button>
@@ -67,13 +66,43 @@ const DeleteAccount = () => {
   );
 };
 
+const EmailStatus = () => {
+  const { user } = useAuth();
+  const [status, setStatus] = useState('');
+
+  const resend = async () => {
+    setStatus('sending');
+    try {
+      await api.post('/auth/resend-verification');
+      setStatus('sent');
+    } catch (error) {
+      setStatus(getErrorMessage(error));
+    }
+  };
+
+  if (user?.emailVerified && !user?.pendingEmail) {
+    return <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400"><BadgeCheck size={14} /> Email verified</p>;
+  }
+
+  return (
+    <div className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400 flex flex-wrap items-center gap-2">
+      <AlertCircle size={14} />
+      {user?.pendingEmail ? `Confirm ${user.pendingEmail} to finish changing your email.` : 'Your email is not verified.'}
+      {status === 'sent' ? <span className="text-emerald-600 dark:text-emerald-400">Link sent. Check your inbox.</span> : (
+        <button onClick={resend} disabled={status === 'sending'} className="underline font-semibold cursor-pointer disabled:opacity-50">Resend link</button>
+      )}
+      {status && !['sent', 'sending'].includes(status) && <span className="text-red-500">{status}</span>}
+    </div>
+  );
+};
+
 const Profile = () => {
   const { user, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
 
   const emailChanged = email.trim().toLowerCase() !== (user?.email || '').toLowerCase();
@@ -85,8 +114,9 @@ const Profile = () => {
     setIsSaving(false);
     if (res?.success) {
       setCurrentPassword('');
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setEmail(res.data.user.email);
+      setSaveSuccess(res.data.message || 'Successfully saved!');
+      setTimeout(() => setSaveSuccess(''), 6000);
     } else {
       setSaveError(res?.error || 'Failed to save changes.');
     }
@@ -106,6 +136,7 @@ const Profile = () => {
         <div>
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name || 'User'}</h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{user?.email || ''}</p>
+          <EmailStatus />
         </div>
       </div>
 
@@ -143,7 +174,7 @@ const Profile = () => {
           </div>
           <div className="pt-4 flex justify-between items-center">
             <div className="flex flex-col">
-              <span className={"text-sm font-medium text-emerald-600 transition-opacity duration-300 " + (saveSuccess ? "opacity-100" : "opacity-0")}>Successfully saved!</span>
+              <span className={"text-sm font-medium text-emerald-600 transition-opacity duration-300 " + (saveSuccess ? "opacity-100" : "opacity-0")}>{saveSuccess || '\u00a0'}</span>
               {saveError && <span className="text-sm font-medium text-red-500">{saveError}</span>}
             </div>
             <button

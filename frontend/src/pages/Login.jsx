@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import { BookOpen, Mail, Lock, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 
 const Login = () => {
@@ -9,14 +10,21 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
     if (!email || !password) { setError('Please fill in all fields.'); return; }
     setIsLoading(true);
-    try { const result = await login(email, password); if (result.success) navigate('/dashboard'); else setError(result.error || 'Login failed.'); } catch (err) { setError('Unexpected error.'); } finally { setIsLoading(false); }
+    try { const result = await login(email, password); if (result.success) navigate('/dashboard'); else setError(result.error || 'Login failed.'); } catch { setError('Unexpected error.'); } finally { setIsLoading(false); }
+  };
+
+  const handleGoogle = async (credential) => {
+    setError(''); setIsLoading(true);
+    const result = await loginWithGoogle(credential);
+    setIsLoading(false);
+    if (result.success) navigate('/dashboard'); else setError(result.error);
   };
 
   return (
@@ -68,11 +76,15 @@ const Login = () => {
                 <div className="relative"><Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0b1120] border border-[#334155]/60 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40 focus:border-amber-500/60 transition-all" placeholder="you@example.com" /></div>
               </div>
               <div>
-                <label htmlFor="password" className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Password</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="password" className="block text-xs font-extrabold uppercase tracking-wider text-slate-400">Password</label>
+                  <Link to="/forgot-password" className="text-xs font-semibold text-amber-400 hover:text-amber-300">Forgot password?</Link>
+                </div>
                 <div className="relative"><Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 pr-12 py-3 rounded-xl bg-[#0b1120] border border-[#334155]/60 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40 focus:border-amber-500/60 transition-all" placeholder="••••••••" /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
               </div>
               <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl text-[#0b1120] font-extrabold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-amber-900/30 bg-gradient-to-r from-amber-500 to-amber-600 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer">{isLoading ? <><Loader2 className="animate-spin w-4 h-4" /> Signing in...</> : 'Sign In'}</button>
             </form>
+            <GoogleSignInButton onCredential={handleGoogle} />
             <p className="text-center text-sm text-slate-500 mt-6">New here? <Link to="/register" className="font-bold text-amber-400 hover:text-amber-300 transition-colors">Create an account</Link></p>
           </div>
         </div>

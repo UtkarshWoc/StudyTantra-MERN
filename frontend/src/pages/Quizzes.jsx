@@ -1,77 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import QuizEngine from '../components/QuizEngine';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
 import { Loader2, Zap } from 'lucide-react';
+import { useDocuments, useQuizzes, useGenerateQuiz } from '../api/hooks';
+import { getErrorMessage } from '../lib/api';
 
 const Quizzes = () => {
-  const { user } = useAuth();
-  const [documents, setDocuments] = useState([]);
-  const [selectedDocId, setSelectedDocId] = useState('');
-  const [activeQuiz, setActiveQuiz] = useState(null);
+  const { data: documents = [], isLoading: loadingDocs } = useDocuments();
+  const [pickedDocId, setPickedDocId] = useState('');
+  const selectedDocId = pickedDocId || documents[0]?._id || '';
+  const setSelectedDocId = (id) => { setPickedDocId(id); setPickedQuizId(''); };
+
   const [quizCount, setQuizCount] = useState(5);
-  const [loadingDocs, setLoadingDocs] = useState(true);
-  const [loadingQuiz, setLoadingQuiz] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState('');
+  const [pickedQuizId, setPickedQuizId] = useState('');
+  const { data: quizzes = [], isLoading: loadingQuiz } = useQuizzes(selectedDocId);
+  const activeQuiz = quizzes.find(q => q._id === pickedQuizId) || quizzes[0] || null;
 
-  // Fetch user docs on load
-  useEffect(() => {
-    const fetchDocs = async () => {
-      if (!user) return;
-      try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/documents`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-        setDocuments(data);
-        if (data.length > 0) setSelectedDocId(data[0]._id);
-      } catch (err) {
-        console.error('Error fetching docs', err);
-      } finally {
-        setLoadingDocs(false);
-      }
-    };
-    fetchDocs();
-  }, [user]);
+  const generate = useGenerateQuiz(selectedDocId);
+  const generating = generate.isPending;
+  const error = generate.error ? getErrorMessage(generate.error, 'Error generating quiz') : '';
 
-  // Fetch quiz when document changes
-  useEffect(() => {
-    const fetchQuiz = async () => {
-      if (!selectedDocId || !user) return;
-      setLoadingQuiz(true);
-      setError('');
-      setActiveQuiz(null);
-      try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/quizzes/document/${selectedDocId}`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-        if (data.length > 0) {
-          setActiveQuiz(data[0]);
-        }
-      } catch (err) {
-        console.error('Error fetching quiz', err);
-      } finally {
-        setLoadingQuiz(false);
-      }
-    };
-    fetchQuiz();
-  }, [selectedDocId, user]);
-
-  const generateQuiz = async () => {
-    if (!selectedDocId || !user) return;
-    setGenerating(true);
-    setError('');
-    try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/quizzes/generate/${selectedDocId}`,
-        { count: quizCount },
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-      setActiveQuiz(data.quiz);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error generating quiz');
-    } finally {
-      setGenerating(false);
-    }
+  const generateQuiz = () => {
+    if (!selectedDocId) return;
+    generate.mutate({ count: quizCount }, { onSuccess: (data) => setPickedQuizId(data.quiz._id) });
   };
 
   if (loadingDocs) {
@@ -128,6 +78,23 @@ const Quizzes = () => {
           </div>
         )}
         {error && <p className="text-red-500 text-sm mt-3 font-medium">{error}</p>}
+        {quizzes.length > 1 && (
+          <div className="mt-4">
+            <label htmlFor="quiz-picker" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Quiz</label>
+            <select
+              id="quiz-picker"
+              value={activeQuiz?._id || ''}
+              onChange={(e) => setPickedQuizId(e.target.value)}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-3 rounded-xl font-medium cursor-pointer"
+            >
+              {quizzes.map((q, i) => (
+                <option key={q._id} value={q._id}>
+                  {`Quiz ${quizzes.length - i} · ${q.totalQuestions} Qs · ${new Date(q.createdAt).toLocaleDateString()}${q.attemptsCount ? ` · best ${q.bestScore}/${q.totalQuestions}` : ' · not attempted'}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="min-h-[400px]">
@@ -137,7 +104,7 @@ const Quizzes = () => {
             <p>Loading quiz data...</p>
           </div>
         ) : activeQuiz ? (
-          <QuizEngine quiz={activeQuiz} />
+          <QuizEngine key={activeQuiz._id} quiz={activeQuiz} />
         ) : selectedDocId && !generating ? (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center shadow-sm border border-gray-100 dark:border-gray-700 mx-auto flex flex-col items-center">
             <div className="bg-indigo-50 dark:bg-indigo-900 p-6 rounded-full text-indigo-400 mb-6">

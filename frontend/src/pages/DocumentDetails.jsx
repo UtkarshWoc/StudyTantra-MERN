@@ -1,59 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import ChatInterface from '../components/ChatInterface';
 import { ArrowLeft, FileText, Loader2, ExternalLink } from 'lucide-react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useDocument, useDocumentFileUrl } from '../api/hooks';
 
 const DocumentDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const location = useLocation();
-  const { user } = useAuth();
 
-  const [document, setDocument] = useState(location.state?.document || null);
-  const [loading, setLoading] = useState(!document);
-  const [fileUrl, setFileUrl] = useState(null);
-  const [fileError, setFileError] = useState('');
-
-  useEffect(() => {
-    if (!document && user) {
-      const fetchDoc = async () => {
-        try {
-          const config = { headers: { Authorization: `Bearer ${user.token}` } };
-          const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/documents/${id}`, config);
-          setDocument(data);
-        } catch (error) {
-          console.error("Error fetching doc:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchDoc();
-    }
-  }, [id, document, user]);
-
-  // PDFs are private: fetch through the authenticated API and show a local blob URL.
-  useEffect(() => {
-    if (!user || !id) return;
-    let objectUrl;
-    let cancelled = false;
-    setFileError('');
-    axios.get(`${import.meta.env.VITE_API_URL}/api/documents/${id}/file`, {
-      headers: { Authorization: `Bearer ${user.token}` },
-      responseType: 'blob',
-    })
-      .then(({ data }) => {
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
-        setFileUrl(objectUrl);
-      })
-      .catch(() => { if (!cancelled) setFileError('Could not load the PDF.'); });
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [id, user]);
+  const { data: document, isLoading: loading } = useDocument(id);
+  // PDFs are private: fetched through the authenticated API and shown from a local blob URL.
+  const { url: fileUrl, isError: fileFailed } = useDocumentFileUrl(id);
+  const fileError = fileFailed ? 'Could not load the PDF.' : '';
 
   return (
     <div className="flex gap-4 h-full p-4 lg:p-6 w-full max-h-screen">

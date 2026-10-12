@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { UploadCloud, X, FileText, CheckCircle } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useUploadDocument } from '../api/hooks';
+import { getErrorMessage } from '../lib/api';
+
+const MAX_BYTES = 10 * 1024 * 1024;
 
 const UploadModal = ({ isOpen, onClose }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const upload = useUploadDocument();
+  const isUploading = upload.isPending;
 
   if (!isOpen) return null;
 
@@ -29,40 +31,30 @@ const UploadModal = ({ isOpen, onClose }) => {
     handleFileSelection(e.dataTransfer.files[0]);
   };
 
-  const handleFileSelection = async (file) => {
-    if (file && user) {
-      setIsUploading(true);
-      setErrorMsg("");
+  const handleFileSelection = (file) => {
+    if (!file) return;
+    setErrorMsg("");
+    // Check before uploading so users don't wait on a request that will be rejected
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErrorMsg('Only PDF files are supported.');
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setErrorMsg('File is too large (max. 10MB).');
+      return;
+    }
 
-      const formData = new FormData();
-      formData.append('document', file);
-      formData.append('title', file.name.split('.')[0]);
-
-      try {
-        const config = {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${user.token}`,
-          },
-        };
-
-        if (!user || !user.token) { setIsUploading(false); setErrorMsg('Not logged in — please sign in again'); return; }
-        const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/documents`, formData, config);
-
-        setIsUploading(false);
+    upload.mutate({ file, title: file.name.replace(/\.pdf$/i, '') }, {
+      onSuccess: (doc) => {
         setUploadSuccess(true);
         setTimeout(() => {
           setUploadSuccess(false);
           onClose();
-          navigate(`/documents/${data._id}`, { state: { document: data } });
-        }, 1500);
-
-      } catch (error) {
-        console.error('Upload Error:', error);
-        setIsUploading(false);
-        setErrorMsg(error.response?.data?.message || 'Error uploading file');
-      }
-    }
+          navigate(`/documents/${doc._id}`);
+        }, 1200);
+      },
+      onError: (error) => setErrorMsg(getErrorMessage(error, 'Error uploading file')),
+    });
   };
 
   return (

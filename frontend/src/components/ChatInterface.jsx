@@ -1,84 +1,51 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '../lib/api';
+import { useChatHistory, keys } from '../api/hooks';
 
 const ChatInterface = ({ documentId, documentTitle }) => {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState([]);
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(true);
   const endOfMessagesRef = useRef(null);
+  const { data: history = [], isLoading: loadingHistory } = useChatHistory(documentId);
 
-  const scrollToBottom = () => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const welcome = {
+    id: 'welcome',
+    sender: 'ai',
+    text: `Hello! I am your AI learning assistant for "${documentTitle || 'your document'}". What would you like to know?`,
   };
+  const messages = [
+    ...(history.length ? history.map((msg, i) => ({ id: i, sender: msg.role === 'model' ? 'ai' : 'user', text: msg.content })) : [welcome]),
+    ...pending,
+  ];
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
-
-  useEffect(() => {
-    if (!documentId || !user) return;
-
-    const fetchHistory = async () => {
-      try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/chat/${documentId}`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-
-        if (data.history && data.history.length > 0) {
-          const formattedHistory = data.history.map((msg, i) => ({
-            id: i,
-            sender: msg.role === 'model' ? 'ai' : 'user',
-            text: msg.content
-          }));
-          setMessages(formattedHistory);
-        } else {
-          setMessages([{
-            id: 'welcome',
-            sender: 'ai',
-            text: `Hello! I am your AI learning assistant. I have analyzed the document "${documentTitle || 'your document'}". What would you like to know?`
-          }]);
-        }
-      } catch (error) {
-        console.error("Failed to load history", error);
-      } finally {
-        setLoadingHistory(false);
-      }
-    };
-
-    fetchHistory();
-  }, [documentId, user, documentTitle]);
+    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length, isTyping]);
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !user || !documentId) return;
+    const userText = input.trim();
+    if (!userText || !documentId || isTyping) return;
 
-    const userText = input;
-    const newMsg = { id: Date.now(), sender: 'user', text: userText };
-    setMessages(prev => [...prev, newMsg]);
+    setPending([{ id: `p-${Date.now()}`, sender: 'user', text: userText }]);
     setInput('');
     setIsTyping(true);
 
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/chat/${documentId}`,
-        { message: userText },
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-
-      setIsTyping(false);
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now() + 1, sender: 'ai', text: data.reply }
-      ]);
+      const { data } = await api.post(`/chat/${documentId}`, { message: userText });
+      queryClient.setQueryData(keys.chat(documentId), data.history);
+      setPending([]);
     } catch (error) {
-      setIsTyping(false);
-      setMessages(prev => [
+      setPending((prev) => [
         ...prev,
-        { id: Date.now() + 1, sender: 'ai', text: 'Error: Could not connect to the AI service. Please try again.' }
+        { id: `e-${Date.now()}`, sender: 'ai', text: error.response?.data?.message || 'Error: Could not connect to the AI service. Please try again.' },
       ]);
+    } finally {
+      setIsTyping(false);
     }
   };
 

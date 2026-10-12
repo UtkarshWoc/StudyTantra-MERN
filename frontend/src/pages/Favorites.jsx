@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Heart,
   Search,
@@ -6,62 +6,22 @@ import {
   Star,
   Loader2
 } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useDocuments, useDeleteDocument, useToggleDocumentFavorite } from '../api/hooks';
+import { formatBytes } from '../lib/format';
 import { useNavigate } from 'react-router-dom';
 import DocumentCard from '../components/DocumentCard';
 
 const Favorites = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: allDocuments = [], isLoading: loading } = useDocuments();
+  const documents = allDocuments.filter(doc => doc.isFavorited);
+  const toggleFavorite = useToggleDocumentFavorite();
+  const deleteDocument = useDeleteDocument();
 
-  const fetchDocuments = async () => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/documents`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      setDocuments(data.filter(doc => doc.isFavorited));
-    } catch (error) {
-      console.error('Error fetching documents', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDocuments();
-  }, [user]);
-
-  const handleToggleFavorite = async (id, currentStatus) => {
-    try {
-      // Optimistic update - just remove it from the favorites list since we are on the Favorites page
-      setDocuments(documents.filter(doc => doc._id !== id));
-
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/documents/${id}/favorite`, {}, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-    } catch (error) {
-      console.error('Failed to toggle favorite', error);
-      // On error, let's just refetch
-      fetchDocuments();
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this document?")) return;
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/documents/${id}`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      setDocuments(documents.filter(doc => doc._id !== id));
-    } catch (error) {
-      console.error('Failed to delete document', error);
-    }
+  const handleToggleFavorite = (id) => toggleFavorite.mutate(id);
+  const handleDelete = (id) => {
+    if (window.confirm("Delete this document and everything generated from it?")) deleteDocument.mutate(id);
   };
 
   const filteredItems = documents.filter(item => {
@@ -107,10 +67,10 @@ const Favorites = () => {
               <div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1">
                 <DocumentCard
                   title={doc.title}
-                  size="PDF"
+                  size={formatBytes(doc.sizeBytes)}
                   date={new Date(doc.createdAt).toLocaleDateString()}
                   isFavorited={doc.isFavorited}
-                  onFavoriteToggle={() => handleToggleFavorite(doc._id, doc.isFavorited)}
+                  onFavoriteToggle={() => handleToggleFavorite(doc._id)}
                   onDelete={() => handleDelete(doc._id)}
                 />
               </div>

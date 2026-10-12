@@ -1,94 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import FlashcardViewer from '../components/FlashcardViewer';
 import { Layers, Loader2, Zap } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useDocuments, useFlashcards, useGenerateFlashcards } from '../api/hooks';
+import { getErrorMessage } from '../lib/api';
+
+const toViewerCard = (card) => ({ id: card._id, front: card.question, back: card.answer, topic: card.topic || 'General' });
 
 const Flashcards = () => {
-  const { user } = useAuth();
-  const [documents, setDocuments] = useState([]);
-  const [selectedDocId, setSelectedDocId] = useState('');
+  const { data: documents = [], isLoading: loadingDocs } = useDocuments();
+  const [pickedDocId, setPickedDocId] = useState('');
+  const selectedDocId = pickedDocId || documents[0]?._id || '';
+  const setSelectedDocId = setPickedDocId;
   const [flashcardCount, setFlashcardCount] = useState(10);
-  const [flashcards, setFlashcards] = useState(null);
-  const [loadingDocs, setLoadingDocs] = useState(true);
-  const [loadingCards, setLoadingCards] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState('');
 
-  // Fetch user docs on load
-  useEffect(() => {
-    const fetchDocs = async () => {
-      if (!user) return;
-      try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/documents`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-        setDocuments(data);
-        if (data.length > 0) setSelectedDocId(data[0]._id);
-      } catch (err) {
-        console.error('Error fetching docs', err);
-      } finally {
-        setLoadingDocs(false);
-      }
-    };
-    fetchDocs();
-  }, [user]);
+  const { data: cards, isLoading: loadingCards } = useFlashcards(selectedDocId);
+  const flashcards = cards ? cards.map(toViewerCard) : null;
 
-  // Fetch flashcards when document changes
-  const fetchCards = async () => {
-    if (!selectedDocId || !user) return;
-    setLoadingCards(true);
-    setError('');
-    setFlashcards(null);
-    try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/flashcards/${selectedDocId}`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      if (data && data.length > 0) {
-        const mappedCards = data.map(card => ({
-          id: card._id,
-          front: card.question,
-          back: card.answer,
-          topic: card.topic || 'General'
-        }));
-        setFlashcards(mappedCards);
-      } else {
-        setFlashcards([]);
-      }
-    } catch (err) {
-      console.error('Error fetching cards', err);
-    } finally {
-      setLoadingCards(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCards();
-  }, [selectedDocId, user]);
-
-  const generateFlashcards = async () => {
-    if (!selectedDocId || !user) return;
-    setGenerating(true);
-    setError('');
-    try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/flashcards/generate/${selectedDocId}`,
-        { count: flashcardCount },
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-
-      const mappedCards = data.flashcards.map(card => ({
-        id: card._id,
-        front: card.question,
-        back: card.answer,
-        topic: card.topic || 'General'
-      }));
-      setFlashcards(mappedCards);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error generating flashcards');
-    } finally {
-      setGenerating(false);
-    }
-  };
+  const generate = useGenerateFlashcards(selectedDocId);
+  const generating = generate.isPending;
+  const error = generate.error ? getErrorMessage(generate.error, 'Error generating flashcards') : '';
+  const generateFlashcards = () => selectedDocId && generate.mutate({ count: flashcardCount });
 
   if (loadingDocs) {
     return (
@@ -161,7 +92,7 @@ const Flashcards = () => {
             <p>Loading flashcard deck...</p>
           </div>
         ) : flashcards && flashcards.length > 0 ? (
-          <FlashcardViewer cards={flashcards} onRestart={fetchCards} />
+          <FlashcardViewer key={selectedDocId} cards={flashcards} />
         ) : selectedDocId && !generating && flashcards !== null ? (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center shadow-sm border border-gray-100 dark:border-gray-700 mx-auto flex flex-col items-center">
             <div className="bg-indigo-50 dark:bg-indigo-900 p-6 rounded-full text-indigo-400 mb-6">
