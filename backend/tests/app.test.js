@@ -46,3 +46,20 @@ describe('grading', () => {
     expect(isCorrectAnswer(q, '')).toBe(false);
   });
 });
+
+describe('AI cost limits', () => {
+  it('uploads, reprocessing and grading are behind per-user limiters', async () => {
+    const routes = await Promise.all([
+      import('../src/routes/documentRoutes.js'),
+      import('../src/routes/quizRoutes.js'),
+    ]);
+    const { aiRateLimit, gradingRateLimit } = await import('../src/middlewares/aiRateLimit.js');
+    const handlersFor = (router, path, method) =>
+      router.default.stack.find((l) => l.route?.path === path && l.route.methods[method])?.route.stack.map((s) => s.handle) || [];
+
+    expect(handlersFor(routes[0], '/', 'post')).toContain(aiRateLimit);
+    expect(handlersFor(routes[0], '/:id/reprocess', 'post')).toContain(aiRateLimit);
+    expect(handlersFor(routes[1], '/:id/check', 'post')).toContain(gradingRateLimit);
+    expect(handlersFor(routes[1], '/:id/submit', 'post')).toContain(gradingRateLimit);
+  });
+});
