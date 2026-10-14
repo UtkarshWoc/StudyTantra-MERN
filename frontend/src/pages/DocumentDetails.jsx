@@ -20,29 +20,29 @@ const SummaryPanel = ({ document, onCitation }) => {
   const ready = document.status === 'ready';
 
   return (
-    <div className="h-full overflow-y-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6">
+    <div className="h-full overflow-y-auto glass-card rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-gray-900 dark:text-white">Summary: <span className="font-medium">{document.title}</span></h3>
+        <h3 className="font-bold text-white">Summary: <span className="font-medium text-slate-300">{document.title}</span></h3>
         <div className="flex items-center gap-2 print:hidden">
         {document.summary && (
-          <button type="button" onClick={() => window.print()} aria-label="Print or save as PDF" className="p-2 rounded-lg text-gray-400 hover:text-amber-500 cursor-pointer"><Printer size={16} /></button>
+          <button type="button" onClick={() => window.print()} aria-label="Print or save as PDF" className="p-2 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 transition-all cursor-pointer"><Printer size={16} /></button>
         )}
         <button
           type="button"
           onClick={() => generate.mutate()}
           disabled={!ready || generate.isPending}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500 text-[#0b1120] hover:bg-amber-600 disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500 text-[#0b1120] hover:bg-amber-400 disabled:opacity-50 btn-press cursor-pointer"
         >
           {generate.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           {document.summary ? 'Regenerate' : 'Generate summary'}
         </button>
         </div>
       </div>
-      {generate.isError && <p className="text-sm text-red-500 mb-3">{getErrorMessage(generate.error)}</p>}
+      {generate.isError && <p className="text-sm text-red-400 mb-3">{getErrorMessage(generate.error)}</p>}
       {document.summary ? (
-        <Markdown onCitation={onCitation} className="text-gray-800 dark:text-gray-100">{document.summary}</Markdown>
+        <Markdown onCitation={onCitation} className="text-slate-200">{document.summary}</Markdown>
       ) : (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-slate-400">
           {ready ? 'Generate a concise study summary of this document: key concepts, definitions and how they connect.' : 'Available once the document has been processed.'}
         </p>
       )}
@@ -64,7 +64,7 @@ const DocumentDetails = () => {
   const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get('page')) || 1));
   const [tab, setTab] = useState('chat');
   const [draft, setDraft] = useState(null);
-  const [panel, setPanel] = useState(null); // { kind: 'explain'|'flashcard', text, mode? }
+  const [panel, setPanel] = useState(null);
 
   const ready = document?.status === 'ready';
 
@@ -93,14 +93,14 @@ const DocumentDetails = () => {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full text-gray-400"><Loader2 className="animate-spin" size={32} /></div>;
+    return <div className="flex items-center justify-center h-full text-slate-500"><Loader2 className="animate-spin" size={32} /></div>;
   }
   if (isError || !document) {
     return (
-      <div className="p-10 text-center">
-        <FileText size={48} className="mx-auto mb-4 text-gray-400" />
-        <p className="font-bold text-gray-300 mb-4">Document not found</p>
-        <Link to="/documents" className="text-amber-400 font-semibold">Back to library</Link>
+      <div className="p-10 text-center animate-fade-in">
+        <FileText size={48} className="mx-auto mb-4 text-slate-600" />
+        <p className="font-bold text-slate-300 mb-4">Document not found</p>
+        <Link to="/documents" className="text-amber-400 font-semibold link-underline">Back to library</Link>
       </div>
     );
   }
@@ -112,16 +112,16 @@ const DocumentDetails = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-4 lg:p-6 gap-4 min-h-0">
+    <div className="flex flex-col h-full p-4 lg:p-6 gap-4 min-h-0 animate-fade-in">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
-        <button onClick={() => navigate('/documents')} className="flex items-center text-gray-400 hover:text-amber-400 text-sm font-semibold transition-colors cursor-pointer">
+        <button onClick={() => navigate('/documents')} className="flex items-center text-slate-500 hover:text-amber-400 text-sm font-semibold transition-colors duration-200 cursor-pointer">
           <ArrowLeft size={16} className="mr-1" /> Library
         </button>
         <h1 className="text-base font-bold text-slate-100 truncate flex-1 min-w-0">{document.title}</h1>
         <DocumentStatus document={document} onRetry={() => reprocess.mutate()} retrying={reprocess.isPending} />
         {fileUrl && (
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-xs text-amber-400 hover:text-amber-300 font-medium gap-1">
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-xs text-amber-400 hover:text-amber-300 font-medium gap-1 transition-colors">
             <ExternalLink size={14} /> Open PDF
           </a>
         )}
@@ -135,7 +135,7 @@ const DocumentDetails = () => {
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`${t.mobileOnly ? 'lg:hidden' : ''} flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${tab === t.id ? 'bg-amber-500/15 text-amber-300' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+            className={`${t.mobileOnly ? 'lg:hidden' : ''} flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${tab === t.id ? 'bg-amber-500/10 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.08)]' : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'}`}
           >
             <t.icon size={15} /> {t.label}
           </button>
@@ -144,11 +144,11 @@ const DocumentDetails = () => {
 
       <div className="flex gap-4 flex-1 min-h-0">
         {/* Viewer */}
-        <div className={`${tab === 'pdf' ? 'flex' : 'hidden'} lg:flex flex-col w-full lg:w-[55%] xl:w-[60%] bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 min-h-0`}>
+        <div className={`${tab === 'pdf' ? 'flex' : 'hidden'} lg:flex flex-col w-full lg:w-[55%] xl:w-[60%] glass-card rounded-2xl p-4 min-h-0`}>
           {fileUrl ? (
             <PdfViewer fileUrl={fileUrl} page={page} onPageChange={setPage} onSelectionAction={handleSelectionAction} />
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="flex-1 flex items-center justify-center text-slate-500">
               {fileFailed ? 'Could not load the PDF.' : <Loader2 className="animate-spin" size={28} />}
             </div>
           )}
@@ -157,27 +157,27 @@ const DocumentDetails = () => {
         {/* Side panel */}
         <div className={`${tab === 'pdf' ? 'hidden lg:flex' : 'flex'} flex-1 flex-col gap-3 min-h-0 min-w-0`}>
           {panel && (
-            <div className="relative bg-white dark:bg-gray-800 rounded-2xl border border-amber-500/30 p-4 max-h-[45%] overflow-y-auto shrink-0">
-              <button onClick={() => setPanel(null)} aria-label="Close" className="absolute top-3 right-3 p-1 rounded text-gray-400 hover:text-gray-200 cursor-pointer"><X size={16} /></button>
+            <div className="relative glass-card rounded-2xl border-amber-500/20 p-4 max-h-[45%] overflow-y-auto shrink-0 animate-slide-down">
+              <button onClick={() => setPanel(null)} aria-label="Close" className="absolute top-3 right-3 p-1 rounded text-slate-500 hover:text-slate-200 transition-colors cursor-pointer"><X size={16} /></button>
               {panel.kind === 'error' && <p className="text-sm text-amber-400 pr-6">{panel.message}</p>}
               {panel.kind === 'explain' && (
                 <>
-                  <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-500 mb-2"><Lightbulb size={14} /> {panel.mode === 'simplify' ? 'In simple words' : 'Explanation'}</p>
-                  <blockquote className="text-xs italic text-gray-500 dark:text-gray-400 border-l-2 border-amber-500/40 pl-2 mb-3 line-clamp-3">{panel.text}</blockquote>
+                  <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-400 mb-2"><Lightbulb size={14} /> {panel.mode === 'simplify' ? 'In simple words' : 'Explanation'}</p>
+                  <blockquote className="text-xs italic text-slate-500 border-l-2 border-amber-500/40 pl-2 mb-3 line-clamp-3">{panel.text}</blockquote>
                   {explain.isPending ? <Loader2 className="animate-spin text-amber-400" size={20} />
-                    : explain.isError ? <p className="text-sm text-red-500">{getErrorMessage(explain.error)}</p>
-                    : <Markdown className="text-gray-800 dark:text-gray-100">{explain.data}</Markdown>}
+                    : explain.isError ? <p className="text-sm text-red-400">{getErrorMessage(explain.error)}</p>
+                    : <Markdown className="text-slate-200">{explain.data}</Markdown>}
                 </>
               )}
               {panel.kind === 'flashcard' && (
-                makeFlashcard.isPending ? <p className="flex items-center gap-2 text-sm text-gray-400"><Loader2 className="animate-spin" size={16} /> Creating a flashcard...</p>
-                  : makeFlashcard.isError ? <p className="text-sm text-red-500 pr-6">{getErrorMessage(makeFlashcard.error)}</p>
+                makeFlashcard.isPending ? <p className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="animate-spin" size={16} /> Creating a flashcard...</p>
+                  : makeFlashcard.isError ? <p className="text-sm text-red-400 pr-6">{getErrorMessage(makeFlashcard.error)}</p>
                   : makeFlashcard.data && (
                     <div className="pr-6">
-                      <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-500 mb-2"><CheckCircle2 size={14} /> Flashcard added</p>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{makeFlashcard.data.question}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{makeFlashcard.data.answer}</p>
-                      <Link to="/flashcards" className="inline-block mt-2 text-xs font-semibold text-amber-500">Open flashcards</Link>
+                      <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-400 mb-2"><CheckCircle2 size={14} /> Flashcard added</p>
+                      <p className="text-sm font-semibold text-slate-100">{makeFlashcard.data.question}</p>
+                      <p className="text-sm text-slate-400 mt-1">{makeFlashcard.data.answer}</p>
+                      <Link to="/flashcards" className="inline-block mt-2 text-xs font-semibold text-amber-400 link-underline">Open flashcards</Link>
                     </div>
                   )
               )}
