@@ -58,13 +58,15 @@ export const readFile = async (doc) => {
     return fs.readFile(path.join(LOCAL_DIR, path.basename(doc.storageKey)));
   }
 
+  // Authenticated files are fetched through the signed Admin API download endpoint.
+  // The CDN delivery URL answers 401 for PDFs on accounts where Cloudinary's
+  // "PDF and ZIP files delivery" security setting is off (the default).
   const url = isLegacy(doc)
     ? doc.filePath
-    : cloudinary.url(doc.storageKey, {
+    : cloudinary.utils.private_download_url(doc.storageKey, '', {
         resource_type: 'raw',
         type: 'authenticated',
-        sign_url: true,
-        secure: true,
+        expires_at: Math.floor(Date.now() / 1000) + 300,
       });
 
   if (!url) throw new Error('Document has no stored file');

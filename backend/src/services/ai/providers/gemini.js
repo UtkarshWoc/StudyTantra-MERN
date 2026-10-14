@@ -27,6 +27,23 @@ const withRetry = async (fn, { retries = 2, baseMs = 800 } = {}) => {
   }
 };
 
+// Embedding a whole book sends hundreds of texts in a row and trips per-minute
+// quotas (free tier counts every text). A 429 clears within the minute, so wait
+// it out instead of failing the document.
+const QUOTA_WAIT_MS = 62_000;
+const MAX_QUOTA_WAITS = 8;
+const withQuotaWait = async (fn) => {
+  for (let waited = 0; ; waited++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if ((err?.status ?? err?.code) !== 429 || waited >= MAX_QUOTA_WAITS) throw err;
+      logger.warn({ waited }, 'Gemini quota reached, waiting for the rate-limit window to reset');
+      await new Promise((r) => setTimeout(r, QUOTA_WAIT_MS));
+    }
+  }
+};
+
 const toContents = ({ history = [], parts }) => [
   ...history.map((m) => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.content }] })),
   { role: 'user', parts },
@@ -82,11 +99,11 @@ export const geminiProvider = {
     // The API accepts batches; keep them modest to stay under request limits.
     for (let i = 0; i < texts.length; i += 50) {
       const batch = texts.slice(i, i + 50);
-      const res = await withRetry(() => getClient().models.embedContent({
+      const res = await withQuotaWait(() => withRetry(() => getClient().models.embedContent({
         model: env.GEMINI_EMBED_MODEL,
         contents: batch,
         config: { taskType, outputDimensionality: dimensions },
-      }));
+      })));
       vectors.push(...(res.embeddings || []).map((e) => e.values || []));
     }
     return vectors;

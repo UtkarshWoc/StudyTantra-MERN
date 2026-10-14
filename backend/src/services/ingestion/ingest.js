@@ -69,9 +69,12 @@ export const ingestDocument = async (documentId) => {
     logger.info({ documentId: String(doc._id), pageCount, chunks: chunks.length, ocr }, 'Document ingested');
   } catch (err) {
     logger.error({ err, documentId: String(doc._id) }, 'Document ingestion failed');
+    const rateLimited = (err?.status ?? err?.code) === 429;
     await Document.updateOne({ _id: doc._id }, {
       status: 'failed',
-      processingError: 'We could not read this PDF. Try re-processing it, or upload a different file.',
+      processingError: rateLimited
+        ? 'The AI service hit its usage limit while indexing this document. Wait a few minutes and retry.'
+        : 'We could not read this PDF. Try re-processing it, or upload a different file.',
     });
   }
 };

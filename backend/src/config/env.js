@@ -35,7 +35,8 @@ const schema = z.object({
 
   GOOGLE_CLIENT_ID: optionalString,
   SENTRY_DSN: optionalString,
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+  // .env.example ships `LOG_LEVEL=` blank; treat that as "use the default"
+  LOG_LEVEL: z.preprocess((v) => (v === '' ? undefined : v), z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional()),
 }).superRefine((env, ctx) => {
   if (env.AI_PROVIDER === 'gemini' && !env.GEMINI_API_KEY) {
     ctx.addIssue({ code: 'custom', path: ['GEMINI_API_KEY'], message: 'GEMINI_API_KEY is required when AI_PROVIDER=gemini' });
