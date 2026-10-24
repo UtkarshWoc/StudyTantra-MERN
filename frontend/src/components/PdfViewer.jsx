@@ -39,6 +39,7 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
   const scrollTimeout = useRef(null);
 
   const [numPages, setNumPages] = useState(null);
+  const [prevPage, setPrevPage] = useState(page);
   const [currentPage, setCurrentPage] = useState(page);
   const [pageInput, setPageInput] = useState(String(page));
   const [width, setWidth] = useState(0);
@@ -46,6 +47,14 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
   const [selection, setSelection] = useState(null); // { text, top, left }
   const [loadError, setLoadError] = useState('');
   const [viewMode, setViewMode] = useState('scroll'); // 'scroll' (top to down) or 'single'
+
+  // Adjust state during render if page prop changed from outside (React recommended pattern)
+  if (page !== prevPage) {
+    setPrevPage(page);
+    setCurrentPage(page);
+    setPageInput(String(page));
+    setSelection(null);
+  }
 
   // Fit the page to the container width; recompute on resize
   useEffect(() => {
@@ -72,17 +81,12 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
     }
   }, []);
 
-  // Sync external page changes (e.g. from citation click in chat)
+  // Sync external page changes to scroll position (DOM side effect only, no setState)
   useEffect(() => {
-    if (page && page !== currentPage) {
-      setCurrentPage(page);
-      setPageInput(String(page));
-      setSelection(null);
-      if (viewMode === 'scroll') {
-        scrollToPage(page, true);
-      }
+    if (viewMode === 'scroll' && page) {
+      scrollToPage(page, true);
     }
-  }, [page, currentPage, viewMode, scrollToPage]);
+  }, [page, viewMode, scrollToPage]);
 
   // Track the current visible page during continuous scroll
   useEffect(() => {
