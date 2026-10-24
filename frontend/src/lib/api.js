@@ -56,8 +56,19 @@ api.interceptors.response.use(
   }
 );
 
-export const getErrorMessage = (error, fallback = 'Something went wrong. Please try again.') =>
-  error?.response?.data?.message || fallback;
+export const getErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
+  const data = error?.response?.data;
+  if (data?.message) return data.message;
+  if (typeof data === 'string' && data.length < 300) {
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.message) return parsed.message;
+    } catch {
+      return data;
+    }
+  }
+  return error?.message || fallback;
+};
 
 /**
  * fetch() with the same auth + refresh behaviour, for streaming responses

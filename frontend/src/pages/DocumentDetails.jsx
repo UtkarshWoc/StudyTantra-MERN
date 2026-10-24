@@ -55,7 +55,7 @@ const DocumentDetails = () => {
   const { id } = useParams();
 
   const { data: document, isLoading, isError } = useDocument(id);
-  const { url: fileUrl, isError: fileFailed } = useDocumentFileUrl(id);
+  const { url: fileUrl, blob: fileBlob, isError: fileFailed } = useDocumentFileUrl(id);
   const reprocess = useReprocessDocument(id);
   const explain = useExplainSelection(id);
   const makeFlashcard = useFlashcardFromSelection(id);
@@ -145,8 +145,8 @@ const DocumentDetails = () => {
       <div className="flex gap-4 flex-1 min-h-0">
         {/* Viewer */}
         <div className={`${tab === 'pdf' ? 'flex' : 'hidden'} lg:flex flex-col w-full lg:w-[55%] xl:w-[60%] glass-card rounded-2xl p-4 min-h-0`}>
-          {fileUrl ? (
-            <PdfViewer fileUrl={fileUrl} page={page} onPageChange={setPage} onSelectionAction={handleSelectionAction} />
+          {fileBlob || fileUrl ? (
+            <PdfViewer fileUrl={fileBlob || fileUrl} page={page} onPageChange={setPage} onSelectionAction={handleSelectionAction} />
           ) : (
             <div className="flex-1 flex items-center justify-center text-slate-500">
               {fileFailed ? 'Could not load the PDF.' : <Loader2 className="animate-spin" size={28} />}

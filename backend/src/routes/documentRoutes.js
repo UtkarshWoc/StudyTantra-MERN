@@ -10,7 +10,7 @@ import {
   updateDocument,
 } from '../controllers/documentController.js';
 import { protect } from '../middlewares/authMiddleware.js';
-import upload from '../middlewares/uploadMiddleware.js';
+import { handleUpload } from '../middlewares/uploadMiddleware.js';
 import { aiRateLimit } from '../middlewares/aiRateLimit.js';
 import { validate } from '../middlewares/validate.js';
 import { documentUpdateSchema } from '../validators/learningSchemas.js';
@@ -19,7 +19,7 @@ const router = express.Router();
 
 // Allow user to upload PDF and get list of documents
 router.route('/')
-  .post(protect, aiRateLimit, upload.single('document'), uploadDocument)
+  .post(protect, aiRateLimit, handleUpload('document'), uploadDocument)
   .get(protect, getUserDocuments);
 
 // Single document operations

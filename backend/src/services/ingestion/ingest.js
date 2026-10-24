@@ -39,6 +39,15 @@ export const ingestDocument = async (documentId) => {
       }
     }
 
+    const totalChars = pages.reduce((n, p) => n + (p.text?.trim()?.length || 0), 0);
+    if (totalChars === 0) {
+      await Document.updateOne({ _id: doc._id }, {
+        status: 'failed',
+        processingError: 'No readable text could be found or transcribed from this PDF. Please upload a file with readable text or clear scans.',
+      });
+      return;
+    }
+
     await setProgress(doc, 35);
     await DocumentPage.deleteMany({ document: doc._id });
     await DocumentPage.insertMany(pages.map((p) => ({ document: doc._id, page: p.page, text: p.text })));
@@ -69,12 +78,16 @@ export const ingestDocument = async (documentId) => {
     logger.info({ documentId: String(doc._id), pageCount, chunks: chunks.length, ocr }, 'Document ingested');
   } catch (err) {
     logger.error({ err, documentId: String(doc._id) }, 'Document ingestion failed');
-    const rateLimited = (err?.status ?? err?.code) === 429;
+    const status = err?.status ?? err?.code;
+    const rateLimited = status === 429;
+    const isInvalidPdf = err?.message?.toLowerCase().includes('pdf') || err?.message?.toLowerCase().includes('invalid');
     await Document.updateOne({ _id: doc._id }, {
       status: 'failed',
       processingError: rateLimited
-        ? 'The AI service hit its usage limit while indexing this document. Wait a few minutes and retry.'
-        : 'We could not read this PDF. Try re-processing it, or upload a different file.',
+        ? 'The AI service hit its usage limit while indexing this document. Wait a few minutes and use the Retry button.'
+        : isInvalidPdf
+          ? 'The PDF could not be read. It may be password-protected, corrupted, or an unsupported format. Try a different file.'
+          : 'Document indexing failed. Use the Retry button, or upload a different file.',
     });
   }
 };

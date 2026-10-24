@@ -121,7 +121,11 @@ export const useDocumentFileUrl = (id) => {
   const [url, setUrl] = useState(null);
   useEffect(() => {
     if (!query.data) return undefined;
-    const objectUrl = URL.createObjectURL(new Blob([query.data], { type: 'application/pdf' }));
+    // query.data is already a Blob from axios responseType:'blob' — create object URL directly.
+    const blob = query.data instanceof Blob
+      ? query.data
+      : new Blob([query.data], { type: 'application/pdf' });
+    const objectUrl = URL.createObjectURL(blob);
     // Syncing with an external resource: the URL must be created and revoked in the
     // same effect so StrictMode's mount/unmount/mount cycle never leaves a revoked URL.
     // eslint-disable-next-line react-hooks/set-state-in-effect

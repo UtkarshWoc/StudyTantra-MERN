@@ -7,26 +7,41 @@ import { enqueueIngestion } from '../services/ingestion/queue.js';
 import { findOwned } from '../utils/ownership.js';
 import { badRequest, conflict } from '../utils/httpError.js';
 
-const isPdf = (buffer) => buffer?.subarray(0, 5).toString('latin1') === '%PDF-';
+const isPdf = (buffer) => {
+  if (!buffer || buffer.length < 5) return false;
+  // Per ISO PDF spec, %PDF- should appear within the first 1024 bytes to tolerate BOM or leading whitespace
+  return buffer.subarray(0, 1024).includes('%PDF-');
+};
 
 // @desc    Upload new document
 // @route   POST /api/documents
 // @access  Private
 export const uploadDocument = async (req, res) => {
   if (!req.file) throw badRequest('No file uploaded');
+  if (!req.file.buffer || req.file.buffer.length === 0) throw badRequest('The uploaded file is empty');
 
   // The mimetype header is client-controlled; check the actual bytes too.
-  if (!isPdf(req.file.buffer)) throw badRequest('File is not a valid PDF');
+  if (!isPdf(req.file.buffer)) throw badRequest('File is not a valid PDF. Make sure you are uploading an actual PDF document.');
 
-  const stored = await saveFile(req.file.buffer, req.file.originalname);
-  const title = (req.body.title || req.file.originalname.replace(/\.pdf$/i, '')).trim().slice(0, 200);
+  let stored;
+  try {
+    stored = await saveFile(req.file.buffer, req.file.originalname);
+  } catch (err) {
+    const storageErr = new Error('Failed to save file to storage. Please check storage configuration or try again.');
+    storageErr.status = 502;
+    storageErr.expose = true;
+    throw storageErr;
+  }
+
+  const rawTitle = (req.body.title || req.file.originalname.replace(/\.pdf$/i, '')).trim();
+  const title = rawTitle.slice(0, 200) || 'Untitled document';
 
   const document = await Document.create({
     user: req.user._id,
-    title: title || 'Untitled document',
+    title,
     filename: req.file.originalname,
     ...stored,
-    sizeBytes: req.file.size || req.file.buffer.length,
+    sizeBytes: req.file.buffer.length,
     status: 'processing',
   });
 
@@ -57,7 +72,15 @@ export const getDocumentById = async (req, res) => {
 // @access  Private
 export const getDocumentFile = async (req, res) => {
   const document = await findOwned(Document, req.params.id, req.user._id, 'Document');
-  const buffer = await readFile(document);
+  let buffer;
+  try {
+    buffer = await readFile(document);
+  } catch (err) {
+    const readErr = new Error('The document file could not be retrieved from storage.');
+    readErr.status = 502;
+    readErr.expose = true;
+    throw readErr;
+  }
   res.set({
     'Content-Type': 'application/pdf',
     'Content-Length': buffer.length,
