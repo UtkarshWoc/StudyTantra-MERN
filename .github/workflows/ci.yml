@@ -29,7 +29,7 @@ jobs:
         with:
           path: ~/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('backend/package-lock.json') }}
-      - run: npm ci --workspaces=false
+      - run: npm ci --workspaces=false --legacy-peer-deps
       - run: npm test
 
   frontend:
@@ -44,7 +44,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci --workspaces=false
+      - run: npm ci --workspaces=false --legacy-peer-deps
       - run: npm run lint
       - run: npm test
       - run: npm run build
@@ -65,9 +65,9 @@ jobs:
         with:
           path: ~/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('backend/package-lock.json') }}
-      - run: npm ci --workspaces=false
+      - run: npm ci --workspaces=false --legacy-peer-deps
         working-directory: backend
-      - run: npm ci --workspaces=false
+      - run: npm ci --workspaces=false --legacy-peer-deps
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
