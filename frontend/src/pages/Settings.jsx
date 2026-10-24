@@ -1,70 +1,180 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  Bell, 
-  Shield, 
-  Palette, 
-  Moon, 
+import {
+  Bell,
+  Shield,
+  Palette,
+  Moon,
   Sun,
   Monitor,
-  CheckCircle2
+  CheckCircle2,
+  GraduationCap,
+  Loader2
 } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { Link } from 'react-router-dom';
+import { useTheme } from '../context/theme';
+import { useAuth } from '../context/auth';
+import { api, getErrorMessage } from '../lib/api';
 
-const Settings = () => {
-  const [activeTab, setActiveTab] = useState('profile');
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: false,
-    marketing: false
-  });
-  const { theme, setTheme } = useTheme();
-  const [isSaved, setIsSaved] = useState(false);
+const inputClass = "w-full px-4 py-2.5 bg-white/[0.04] border border-white/[0.08] text-white placeholder-slate-500 rounded-xl focus:outline-none focus:border-amber-500/40 focus:bg-white/[0.06] focus:shadow-[0_0_20px_rgba(245,158,11,0.08)] transition-all duration-300";
 
-  const handleSave = () => {
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+const ChangePasswordForm = () => {
+  const { user, changePassword } = useAuth();
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' });
+  const [status, setStatus] = useState({ saving: false, error: '', success: false });
+
+  if (!user?.hasPassword) {
+    return (
+      <p className="text-sm text-slate-400 max-w-md">
+        You sign in with Google. To also sign in with a password, use <Link to="/forgot-password" className="text-amber-400 font-semibold link-underline">Forgot password</Link> and we will email you a link to set one.
+      </p>
+    );
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (form.newPassword.length < 8) return setStatus({ saving: false, error: 'New password must be at least 8 characters.', success: false });
+    if (form.newPassword !== form.confirm) return setStatus({ saving: false, error: 'New passwords do not match.', success: false });
+    setStatus({ saving: true, error: '', success: false });
+    const res = await changePassword(form.currentPassword, form.newPassword);
+    if (res.success) {
+      setForm({ currentPassword: '', newPassword: '', confirm: '' });
+      setStatus({ saving: false, error: '', success: true });
+    } else {
+      setStatus({ saving: false, error: res.error, success: false });
+    }
   };
 
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 max-w-md">
+      <input type="password" autoComplete="current-password" placeholder="Current password" value={form.currentPassword}
+        onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} className={inputClass} />
+      <input type="password" autoComplete="new-password" placeholder="New password (min. 8 characters)" value={form.newPassword}
+        onChange={(e) => setForm({ ...form, newPassword: e.target.value })} className={inputClass} />
+      <input type="password" autoComplete="new-password" placeholder="Confirm new password" value={form.confirm}
+        onChange={(e) => setForm({ ...form, confirm: e.target.value })} className={inputClass} />
+      {status.error && <p className="text-sm text-red-400 animate-scale-in">{status.error}</p>}
+      {status.success && <p className="text-sm text-emerald-400 flex items-center gap-1.5"><CheckCircle2 size={16} /> Password updated. Other devices were signed out.</p>}
+      <button
+        type="submit"
+        disabled={status.saving || !form.currentPassword || !form.newPassword}
+        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0b1120] text-sm font-bold rounded-xl shadow-lg shadow-amber-900/20 btn-press disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {status.saving && <Loader2 size={16} className="animate-spin" />}
+        Update Password
+      </button>
+    </form>
+  );
+};
+
+const SessionsCard = () => {
+  const [state, setState] = useState({ loading: false, message: '', error: '' });
+
+  const logoutOthers = async () => {
+    setState({ loading: true, message: '', error: '' });
+    try {
+      const { data } = await api.post('/auth/logout-others');
+      setState({ loading: false, message: data.count ? `Signed out ${data.count} other session${data.count === 1 ? '' : 's'}.` : 'No other active sessions.', error: '' });
+    } catch (error) {
+      setState({ loading: false, message: '', error: getErrorMessage(error) });
+    }
+  };
+
+  return (
+    <div className="pt-6 border-t border-white/[0.06]">
+      <h3 className="text-sm font-semibold text-white">Active Sessions</h3>
+      <p className="text-sm text-slate-400 mb-4 mt-1">Sign out everywhere except this device.</p>
+      <button onClick={logoutOthers} disabled={state.loading} className="cursor-pointer px-4 py-2.5 glass-card text-slate-300 text-sm font-medium rounded-xl hover:bg-white/[0.06] hover:border-amber-500/20 transition-all btn-press disabled:opacity-50 flex items-center gap-2">
+        {state.loading && <Loader2 size={16} className="animate-spin" />}
+        Log out other devices
+      </button>
+      {state.message && <p className="text-sm text-emerald-400 mt-3">{state.message}</p>}
+      {state.error && <p className="text-sm text-red-400 mt-3">{state.error}</p>}
+    </div>
+  );
+};
+
+const StudySettings = () => {
+  const { user, updatePreferences } = useAuth();
+  const prefs = user?.preferences || {};
+  const [form, setForm] = useState({ dailyGoal: prefs.dailyGoal ?? 20, newCardsPerDay: prefs.newCardsPerDay ?? 20, timezone: prefs.timezone || 'UTC' });
+  const [status, setStatus] = useState({ saving: false, error: '', saved: false });
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const save = async (e) => {
+    e.preventDefault();
+    setStatus({ saving: true, error: '', saved: false });
+    const res = await updatePreferences({ dailyGoal: Number(form.dailyGoal), newCardsPerDay: Number(form.newCardsPerDay), timezone: form.timezone });
+    setStatus({ saving: false, error: res.success ? '' : res.error, saved: res.success });
+  };
+
+  return (
+    <form onSubmit={save} className="space-y-5 max-w-md">
+      <div>
+        <label htmlFor="pref-goal" className="text-sm font-medium text-slate-300">Daily review goal (cards)</label>
+        <input id="pref-goal" type="number" min={1} max={500} value={form.dailyGoal} onChange={(e) => setForm({ ...form, dailyGoal: e.target.value })} className={`${inputClass} mt-1.5`} />
+      </div>
+      <div>
+        <label htmlFor="pref-new" className="text-sm font-medium text-slate-300">New flashcards per day</label>
+        <input id="pref-new" type="number" min={0} max={200} value={form.newCardsPerDay} onChange={(e) => setForm({ ...form, newCardsPerDay: e.target.value })} className={`${inputClass} mt-1.5`} />
+        <p className="text-xs text-slate-500 mt-1">How many never-seen cards spaced repetition introduces each day.</p>
+      </div>
+      <div>
+        <label htmlFor="pref-tz" className="text-sm font-medium text-slate-300">Timezone</label>
+        <div className="flex gap-2 mt-1.5">
+          <input id="pref-tz" value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} className={inputClass} />
+          {browserTz && browserTz !== form.timezone && (
+            <button type="button" onClick={() => setForm({ ...form, timezone: browserTz })} className="whitespace-nowrap px-3 rounded-xl glass-card text-sm text-slate-300 cursor-pointer hover:text-amber-300 hover:border-amber-500/20 transition-all">Use {browserTz}</button>
+          )}
+        </div>
+        <p className="text-xs text-slate-500 mt-1">Used for streaks and your daily goal.</p>
+      </div>
+      {status.error && <p className="text-sm text-red-400">{status.error}</p>}
+      {status.saved && <p className="text-sm text-emerald-400 flex items-center gap-1.5"><CheckCircle2 size={16} /> Saved.</p>}
+      <button type="submit" disabled={status.saving} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0b1120] text-sm font-bold rounded-xl shadow-lg shadow-amber-900/20 btn-press disabled:opacity-50 cursor-pointer">
+        {status.saving && <Loader2 size={16} className="animate-spin" />} Save
+      </button>
+    </form>
+  );
+};
+
+const Settings = () => {
+  const [activeTab, setActiveTab] = useState('study');
+  const { theme, setTheme } = useTheme();
+
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: <User size={18} /> },
+    { id: 'study', label: 'Study', icon: <GraduationCap size={18} /> },
     { id: 'appearance', label: 'Appearance', icon: <Palette size={18} /> },
+    { id: 'security', label: 'Security', icon: <Shield size={18} /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
-    { id: 'security', label: 'Security', icon: <Shield size={18} /> }
+  ];
+
+  const themeOptions = [
+    { id: 'light', label: 'Light', icon: <Sun size={28} /> },
+    { id: 'dark', label: 'Dark', icon: <Moon size={28} /> },
+    { id: 'system', label: 'System', icon: <Monitor size={28} /> },
   ];
 
   return (
-    <div className="flex-1 bg-gray-50/50 dark:bg-gray-900 min-h-screen p-8 w-full block transition-colors duration-200">
+    <div className="flex-1 min-h-screen p-8 w-full animate-fade-in">
       <div className="max-w-4xl mx-auto flex flex-col items-start w-full">
-        {/* Header */}
-        <div className="mb-8 flex justify-between items-end w-full">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Settings</h1>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Manage your account settings and preferences.</p>
-          </div>
-          <button 
-            onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl shadow-sm transition-all focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95 cursor-pointer"
-          >
-            {isSaved ? <CheckCircle2 size={16} /> : null}
-            {isSaved ? 'Saved' : 'Save Changes'}
-          </button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white tracking-tight">Settings</h1>
+          <p className="text-sm font-medium text-slate-400 mt-2">Manage your preferences and security.</p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-8 w-full mt-4 items-start">
-          {/* Sidebar */}
           <aside className="w-full md:w-64 shrink-0 space-y-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all cursor-pointer ${
-                  activeTab === tab.id 
-                    ? 'bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-400 shadow-sm border border-gray-100 dark:border-gray-700' 
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white border border-transparent'
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'glass-card text-amber-300'
+                    : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 border border-transparent'
                 }`}
               >
-                <div className={`${activeTab === tab.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                <div className={`${activeTab === tab.id ? 'text-amber-400' : 'text-slate-500'} transition-colors`}>
                   {tab.icon}
                 </div>
                 {tab.label}
@@ -72,209 +182,62 @@ const Settings = () => {
             ))}
           </aside>
 
-          {/* Main Content Area */}
-          <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 w-full min-h-[500px] transition-colors duration-200">
-            {activeTab === 'profile' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="border-b border-gray-100 dark:border-gray-700 pb-5">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Public Profile</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">This information will be displayed publicly so be careful what you share.</p>
+          <div className="flex-1 glass-card rounded-2xl p-8 w-full min-h-[400px]">
+            {activeTab === 'study' && (
+              <div className="space-y-8 animate-slide-up">
+                <div className="border-b border-white/[0.06] pb-5">
+                  <h2 className="text-lg font-semibold text-white">Study</h2>
+                  <p className="text-sm text-slate-400 mt-1">Daily goal, spaced repetition and timezone.</p>
                 </div>
-
-                <div className="space-y-6">
-                  {/* Avatar Section */}
-                  <div className="flex items-center gap-6">
-                    <div className="h-20 w-20 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold shadow-inner">
-                      U
-                    </div>
-                    <div>
-                      <div className="flex gap-3">
-                        <button className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors shadow-sm focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 cursor-pointer">
-                          Change
-                        </button>
-                        <button className="px-4 py-2 text-red-600 dark:text-red-400 text-sm font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-1 cursor-pointer">
-                          Remove
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">JPG, GIF or PNG. 1MB max.</p>
-                    </div>
-                  </div>
-
-                  {/* Form Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-                      <input 
-                        type="text" 
-                        defaultValue=""
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-                      <input 
-                        type="text" 
-                        defaultValue=""
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5 md:col-span-2">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
-                      <input 
-                        type="email" 
-                        defaultValue=""
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5 md:col-span-2">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bio</label>
-                      <textarea 
-                        rows={4}
-                        placeholder="Write a few sentences about yourself."
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none resize-none"
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
+                <StudySettings />
               </div>
             )}
 
             {activeTab === 'appearance' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="border-b border-gray-100 dark:border-gray-700 pb-5">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Appearance</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Customize how the app looks on your device.</p>
+              <div className="space-y-8 animate-slide-up">
+                <div className="border-b border-white/[0.06] pb-5">
+                  <h2 className="text-lg font-semibold text-white">Appearance</h2>
+                  <p className="text-sm text-slate-400 mt-1">Customize how the app looks. Saved automatically.</p>
                 </div>
-
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">Theme Preference</label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <button 
-                        onClick={() => setTheme('light')}
-                        className={`cursor-pointer flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${theme === 'light' ? 'border-indigo-600 bg-indigo-50/50 dark:border-indigo-500 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'}`}
-                      >
-                        <div className="h-20 w-full bg-gray-100 dark:bg-gray-900 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">
-                          <Sun size={28} />
-                        </div>
-                        <span className={`text-sm font-medium ${theme === 'light' ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>Light</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setTheme('dark')}
-                        className={`cursor-pointer flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${theme === 'dark' ? 'border-indigo-600 bg-indigo-50/50 dark:border-indigo-500 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'}`}
-                      >
-                        <div className="h-20 w-full bg-gray-800 dark:bg-gray-950 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-600">
-                          <Moon size={28} />
-                        </div>
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>Dark</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setTheme('system')}
-                        className={`cursor-pointer flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${theme === 'system' ? 'border-indigo-600 bg-indigo-50/50 dark:border-indigo-500 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'}`}
-                      >
-                        <div className="h-20 w-full bg-gradient-to-r from-gray-100 to-gray-800 dark:from-gray-900 dark:to-gray-950 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600">
-                          <Monitor size={28} />
-                        </div>
-                        <span className={`text-sm font-medium ${theme === 'system' ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>System Default</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'notifications' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="border-b border-gray-100 dark:border-gray-700 pb-5">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">We'll always let you know about important changes, but you pick what else you want to hear about.</p>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between py-2">
-                    <div className="space-y-0.5">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive daily summaries and activity updates via email.</p>
-                    </div>
-                    <button 
-                      onClick={() => setNotifications({...notifications, email: !notifications.email})}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${notifications.email ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {themeOptions.map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setTheme(opt.id)}
+                      className={`cursor-pointer flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-300 ${theme === opt.id ? 'border-amber-500/50 bg-amber-500/[0.06] shadow-[0_0_20px_rgba(245,158,11,0.08)]' : 'border-white/[0.08] hover:border-white/[0.15] bg-white/[0.02]'}`}
                     >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifications.email ? 'translate-x-5' : 'translate-x-0'}`} />
+                      <div className={`h-20 w-full rounded-lg flex items-center justify-center ${theme === opt.id ? 'text-amber-400' : 'text-slate-500'} bg-white/[0.04]`}>
+                        {opt.icon}
+                      </div>
+                      <span className={`text-sm font-medium ${theme === opt.id ? 'text-amber-300' : 'text-slate-400'}`}>{opt.label}</span>
                     </button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700 pt-6">
-                    <div className="space-y-0.5">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive instant updates on your devices.</p>
-                    </div>
-                    <button 
-                      onClick={() => setNotifications({...notifications, push: !notifications.push})}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${notifications.push ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                    >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifications.push ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700 pt-6">
-                    <div className="space-y-0.5">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">Marketing Communications</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive news, special offers, and event updates.</p>
-                    </div>
-                    <button 
-                      onClick={() => setNotifications({...notifications, marketing: !notifications.marketing})}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${notifications.marketing ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                    >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifications.marketing ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {activeTab === 'security' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="border-b border-gray-100 dark:border-gray-700 pb-5">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Security</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your password and security settings.</p>
+              <div className="space-y-8 animate-slide-up">
+                <div className="border-b border-white/[0.06] pb-5">
+                  <h2 className="text-lg font-semibold text-white">Security</h2>
+                  <p className="text-sm text-slate-400 mt-1">Manage your password and signed-in devices.</p>
                 </div>
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-white">Change Password</h3>
+                  <ChangePasswordForm />
+                </div>
+                <SessionsCard />
+              </div>
+            )}
 
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Change Password</h3>
-                    <div className="space-y-3 max-w-md">
-                      <input 
-                        type="password" 
-                        placeholder="Current password"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none"
-                      />
-                      <input 
-                        type="password" 
-                        placeholder="New password"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none"
-                      />
-                      <input 
-                        type="password" 
-                        placeholder="Confirm new password"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Active Sessions</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 mt-1">If necessary, you can sign out of all your other active sessions across your devices.</p>
-                    <button className="cursor-pointer px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800">
-                      Log out other devices
-                    </button>
-                  </div>
+            {activeTab === 'notifications' && (
+              <div className="space-y-8 animate-slide-up">
+                <div className="border-b border-white/[0.06] pb-5">
+                  <h2 className="text-lg font-semibold text-white">Notifications</h2>
+                  <p className="text-sm text-slate-400 mt-1">Study reminders by email are coming soon. We don't send any notifications yet.</p>
                 </div>
               </div>
             )}
-            
           </div>
         </div>
       </div>

@@ -1,160 +1,209 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { Send, Bot, User, Sparkles, Loader2, Square, Trash2, BookOpen } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useChatHistory, useClearChat, chatPath, chatKey } from '../api/hooks';
+import { streamChat } from '../lib/chatStream';
+import Markdown from './Markdown';
 
-const ChatInterface = ({ documentId, documentTitle }) => {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState([]);
+const CitationChips = ({ citations, onCitation }) => {
+  const seen = new Set();
+  const chips = (citations || []).filter((c) => {
+    const key = `${c.document}-${c.page}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (!chips.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-white/[0.06]">
+      <BookOpen size={12} className="text-slate-500" />
+      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Sources</span>
+      {chips.map((c) => (
+        <button
+          key={`${c.document}-${c.page}`}
+          type="button"
+          onClick={() => onCitation?.(c.page, c)}
+          className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-all duration-200 cursor-pointer"
+        >
+          {c.title ? `${c.title} · ` : ''}p. {c.page}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const Bubble = ({ sender, children }) => (
+  <div className={`flex max-w-[92%] animate-slide-up ${sender === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
+    <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${sender === 'user' ? 'bg-amber-500/80 ml-3' : 'bg-gradient-to-br from-amber-400 to-amber-600 mr-3 shadow-lg shadow-amber-900/20'}`}>
+      {sender === 'user' ? <User size={14} className="text-white" /> : <Bot size={14} className="text-white" />}
+    </div>
+    <div className={`p-4 min-w-0 ${sender === 'user' ? 'bg-amber-500/15 text-slate-100 rounded-2xl rounded-tr-sm border border-amber-500/20 whitespace-pre-wrap text-[15px]' : 'glass-card text-slate-200 rounded-2xl rounded-tl-sm'}`}>
+      {children}
+    </div>
+  </div>
+);
+
+const ChatInterface = ({ documentId, collectionId, documentTitle, ready = true, onCitation, draft, onDraftUsed }) => {
+  const queryClient = useQueryClient();
+  const target = { documentId, collectionId };
+  const { data: history = [], isLoading: loadingHistory } = useChatHistory(target);
+  const clearChat = useClearChat(target);
+
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [pending, setPending] = useState(null);
+  const abortRef = useRef(null);
   const endOfMessagesRef = useRef(null);
+  const inputRef = useRef(null);
+  const streaming = Boolean(pending && !pending.error);
 
-  const scrollToBottom = () => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const [usedDraft, setUsedDraft] = useState(null);
+  if (draft && draft !== usedDraft) {
+    setUsedDraft(draft);
+    setInput(draft.text);
+  }
+  useEffect(() => {
+    if (!draft) return;
+    inputRef.current?.focus();
+    onDraftUsed?.();
+  }, [draft, onDraftUsed]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [history.length, pending?.answer, pending?.error]);
 
-  useEffect(() => {
-    if (!documentId || !user) return;
-
-    const fetchHistory = async () => {
-      try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/chat/${documentId}`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-
-        if (data.history && data.history.length > 0) {
-          const formattedHistory = data.history.map((msg, i) => ({
-            id: i,
-            sender: msg.role === 'model' ? 'ai' : 'user',
-            text: msg.content
-          }));
-          setMessages(formattedHistory);
-        } else {
-          setMessages([{
-            id: 'welcome',
-            sender: 'ai',
-            text: `Hello! I am your AI learning assistant. I have analyzed the document "${documentTitle || 'your document'}". What would you like to know?`
-          }]);
-        }
-      } catch (error) {
-        console.error("Failed to load history", error);
-      } finally {
-        setLoadingHistory(false);
-      }
-    };
-
-    fetchHistory();
-  }, [documentId, user, documentTitle]);
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !user || !documentId) return;
+    const question = input.trim();
+    if (!question || streaming || !ready) return;
 
-    const userText = input;
-    const newMsg = { id: Date.now(), sender: 'user', text: userText };
-    setMessages(prev => [...prev, newMsg]);
     setInput('');
-    setIsTyping(true);
+    setPending({ question, answer: '', citations: [] });
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/chat/${documentId}`,
-        { message: userText },
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-
-      setIsTyping(false);
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now() + 1, sender: 'ai', text: data.reply }
-      ]);
+      const finalHistory = await streamChat(chatPath(target), question, {
+        signal: controller.signal,
+        onSources: ({ citations }) => setPending((p) => ({ ...p, citations })),
+        onToken: (text) => setPending((p) => ({ ...p, answer: p.answer + text })),
+      });
+      if (finalHistory) queryClient.setQueryData(chatKey(target), finalHistory);
+      setPending(null);
     } catch (error) {
-      setIsTyping(false);
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now() + 1, sender: 'ai', text: 'Error: Could not connect to the AI service. Please try again.' }
-      ]);
+      if (controller.signal.aborted) {
+        await queryClient.invalidateQueries({ queryKey: chatKey(target) });
+        setPending(null);
+      } else {
+        setPending((p) => ({ ...p, error: error.message }));
+      }
+    } finally {
+      abortRef.current = null;
     }
   };
 
+  const messages = history.map((msg, i) => ({ id: i, sender: msg.role === 'model' ? 'ai' : 'user', text: msg.content, citations: msg.citations }));
+
   if (loadingHistory) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-gray-400">
+      <div className="flex flex-col items-center justify-center h-full w-full glass-card rounded-2xl text-slate-500">
         <Loader2 className="animate-spin mb-3" size={32} />
-        <p>Loading AI context...</p>
+        <p>Loading conversation...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden font-sans transition-colors">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center bg-white dark:bg-gray-800 transition-colors">
-        <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400 mr-3">
-          <Sparkles size={20} />
+    <div className="flex flex-col h-full w-full glass-card rounded-2xl overflow-hidden font-sans">
+      <div className="px-5 py-3.5 border-b border-white/[0.06] flex items-center">
+        <div className="bg-amber-500/10 p-2 rounded-lg text-amber-400 mr-3">
+          <Sparkles size={18} />
         </div>
-        <div>
-          <h3 className="font-bold text-gray-900 dark:text-white text-sm">AI Study Assistant</h3>
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Document Context Active</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-white text-sm">AI Study Assistant</h3>
+          <p className={`text-xs font-medium ${ready ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {ready ? 'Answers cite pages from your document' : 'Waiting for the document to finish processing...'}
+          </p>
         </div>
+        {history.length > 0 && (
+          <button
+            type="button"
+            onClick={() => window.confirm('Clear this conversation?') && clearChat.mutate()}
+            disabled={streaming || clearChat.isPending}
+            aria-label="Clear conversation"
+            className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 transition-all duration-200 cursor-pointer"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
       </div>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
+      <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-[#0b1120]/40" aria-live="polite">
+        {messages.length === 0 && !pending && (
+          <Bubble sender="ai">
+            <p className="text-[15px]">Hi! Ask me anything about <span className="font-semibold text-amber-300">{documentTitle || 'this document'}</span>. I'll answer from {collectionId ? 'these documents' : 'the document'} and show which pages I used.</p>
+          </Bubble>
+        )}
+
         {messages.map((msg) => (
-          <div key={msg.id} className={`flex max-w-[85%] ${msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
-            <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${msg.sender === 'user' ? 'bg-indigo-600 ml-3' : 'bg-gradient-to-br from-indigo-500 to-purple-600 mr-3 shadow-sm'}`}>
-              {msg.sender === 'user' ? <User size={16} className="text-white" /> : <Bot size={16} className="text-white" />}
-            </div>
-            <div className={`p-4 text-[15px] ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-sm' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-2xl rounded-tl-sm shadow-sm leading-relaxed'} whitespace-pre-wrap transition-colors`}>
-              {msg.text}
-            </div>
-          </div>
+          <Bubble key={msg.id} sender={msg.sender}>
+            {msg.sender === 'ai' ? (
+              <>
+                <Markdown onCitation={onCitation}>{msg.text}</Markdown>
+                <CitationChips citations={msg.citations} onCitation={onCitation} />
+              </>
+            ) : msg.text}
+          </Bubble>
         ))}
 
-        {isTyping && (
-          <div className="flex max-w-[85%] animate-in fade-in duration-300">
-            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm">
-              <Bot size={16} className="text-white" />
-            </div>
-            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex items-center justify-center h-12 w-16 transition-colors">
-              <div className="flex space-x-1.5">
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-              </div>
-            </div>
-          </div>
+        {pending && (
+          <>
+            <Bubble sender="user">{pending.question}</Bubble>
+            <Bubble sender="ai">
+              {pending.error ? (
+                <p className="text-sm text-red-400">{pending.error}</p>
+              ) : pending.answer ? (
+                <Markdown onCitation={onCitation}>{pending.answer}</Markdown>
+              ) : (
+                <div className="flex space-x-1.5 py-1" aria-label="Thinking">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
+                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
+                </div>
+              )}
+            </Bubble>
+          </>
         )}
         <div ref={endOfMessagesRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 transition-colors">
+      <div className="p-4 border-t border-white/[0.06]">
         <form onSubmit={handleSend} className="relative flex items-center">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about your documents..."
-            className="w-full pl-4 pr-12 py-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-gray-400 text-gray-900 dark:text-gray-100 shadow-inner"
+            disabled={!ready}
+            maxLength={4000}
+            aria-label="Ask a question"
+            placeholder={ready ? 'Ask a question about this document...' : 'Processing document...'}
+            className="w-full pl-4 pr-12 py-3.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm focus:outline-none focus:border-amber-500/40 focus:bg-white/[0.06] focus:shadow-[0_0_20px_rgba(245,158,11,0.08)] transition-all duration-300 placeholder-slate-500 text-slate-100 disabled:opacity-60"
           />
-          <button
-            type="submit"
-            disabled={!input.trim() || isTyping}
-            className="absolute right-2 p-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm cursor-pointer"
-          >
-            <Send size={16} className="ml-0.5" />
-          </button>
+          {streaming ? (
+            <button type="button" onClick={() => abortRef.current?.abort()} aria-label="Stop generating" className="absolute right-2 p-2 text-white bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer">
+              <Square size={16} />
+            </button>
+          ) : (
+            <button type="submit" disabled={!input.trim() || !ready} aria-label="Send" className="absolute right-2 p-2 text-[#0b1120] bg-amber-500 rounded-lg hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer btn-press">
+              <Send size={16} className="ml-0.5" />
+            </button>
+          )}
         </form>
-        <p className="text-center text-xs text-gray-400 mt-3 flex items-center justify-center tracking-wide">
+        <p className="text-center text-xs text-slate-500 mt-2.5 flex items-center justify-center">
           <Sparkles size={12} className="mr-1.5" />
-          AI responses can make mistakes. Verify important information.
+          AI can make mistakes. Check the cited pages.
         </p>
       </div>
     </div>

@@ -1,91 +1,129 @@
 import Document from '../models/Document.js';
 import Flashcard from '../models/Flashcard.js';
-import { generateFlashcardsFromUrl } from '../utils/geminiAI.js';
+import { generateFlashcards as aiGenerateFlashcards } from '../services/ai/index.js';
+import { buildStudySource, ensureReady } from '../services/studySource.js';
+import { retrieveChunks } from '../services/retrieval.js';
+import { findOwned } from '../utils/ownership.js';
+import { HttpError } from '../utils/httpError.js';
+import { recordActivity } from '../services/activity.js';
+
+const normalizeQuestion = (q) => String(q).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const toCards = (generated, { user, document, existing, count }) => {
+  const seen = new Set(existing.map(normalizeQuestion));
+  const cards = [];
+  for (const card of Array.isArray(generated) ? generated : []) {
+    if (!card?.question || !card?.answer) continue;
+    const key = normalizeQuestion(card.question);
+    if (seen.has(key)) continue; // skip duplicates of existing cards
+    seen.add(key);
+    cards.push({ user, document, question: card.question, answer: card.answer, topic: card.topic || 'General' });
+    if (cards.length >= count) break;
+  }
+  return cards;
+};
 
 // @desc    Generate flashcards from document using AI
 // @route   POST /api/flashcards/generate/:docId
 // @access  Private
 export const generateFlashcards = async (req, res) => {
-  try {
-    const document = await Document.findById(req.params.docId);
+  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  const { count, scope, difficulty, replace } = req.body;
 
-    if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
+  const { text, focus } = await buildStudySource(document, scope);
+  const existing = replace ? [] : (await Flashcard.find({ document: document._id, user: req.user._id }).select('question').lean()).map((c) => c.question);
 
-    if (document.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Not authorized for this document' });
-    }
+  const generated = await aiGenerateFlashcards({ source: { text }, count, focus, difficulty, avoid: existing });
+  const cards = toCards(generated, { user: req.user._id, document: document._id, existing, count });
+  if (!cards.length) throw new HttpError(502, 'The AI did not return any new flashcards. Try a different scope.');
 
-    if (!document.filePath) {
-      return res.status(404).json({ message: 'Document file URL missing' });
-    }
+  if (replace) await Flashcard.deleteMany({ document: document._id, user: req.user._id });
+  const saved = await Flashcard.insertMany(cards);
+  const flashcards = await Flashcard.find({ document: document._id, user: req.user._id }).sort({ createdAt: 1 });
+  await recordActivity(req.user._id, 'generate', { document: document._id, meta: { kind: 'flashcards', count: saved.length } });
 
-    // Clear previous flashcards for this document to avoid duplicates when regenerating
-    await Flashcard.deleteMany({ document: document._id, user: req.user._id });
+  res.status(201).json({ message: `${saved.length} flashcards added`, added: saved.length, flashcards });
+};
 
-    // Number of flashcards to generate
-    const count = parseInt(req.body.count, 10) || 10;
+// @desc    Turn a passage selected in the viewer into one flashcard
+// @route   POST /api/flashcards/from-selection/:docId
+// @access  Private
+export const flashcardFromSelection = async (req, res) => {
+  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  ensureReady(document);
 
-    // Send the Cloudinary URL directly to Gemini for processing
-    const generatedCards = await generateFlashcardsFromUrl(document.filePath, count);
+  const sources = await retrieveChunks({ documentIds: [document._id], query: req.body.text, k: 2 });
+  const context = [req.body.text, ...sources.map((s) => s.text)].join('\n\n');
+  const generated = await aiGenerateFlashcards({ source: { text: context }, count: 1, focus: `this passage: "${req.body.text.slice(0, 300)}"` });
 
-    // Filter out invalid ones just in case
-    const validCards = generatedCards.filter((card) => card.question && card.answer && card.topic);
+  const [card] = toCards(generated, { user: req.user._id, document: document._id, existing: [], count: 1 });
+  if (!card) throw new HttpError(502, 'The AI could not make a flashcard from that selection.');
 
-    // Prepare Flashcard documents for bulk insertion
-    const flashcardsToInsert = validCards.map((card) => ({
-      user: req.user._id,
-      document: document._id,
-      question: card.question,
-      answer: card.answer,
-      topic: card.topic || 'General',
-    }));
-
-    // Bulk insert into the database
-    const savedFlashcards = await Flashcard.insertMany(flashcardsToInsert);
-
-    res.status(201).json({ message: `${savedFlashcards.length} flashcards generated!`, flashcards: savedFlashcards });
-  } catch (error) {
-    console.error('Error generating flashcards:', error);
-    res.status(500).json({ message: 'Server error generating flashcards', error: error.message });
-  }
+  const flashcard = await Flashcard.create(card);
+  res.status(201).json({ flashcard });
 };
 
 // @desc    Get all flashcards for a specific document
 // @route   GET /api/flashcards/:docId
 // @access  Private
 export const getFlashcardsByDoc = async (req, res) => {
-  try {
-    const flashcards = await Flashcard.find({ document: req.params.docId, user: req.user._id });
-    res.json(flashcards);
-  } catch (error) {
-    console.error('Error fetching flashcards:', error);
-    res.status(500).json({ message: 'Server error fetching flashcards' });
-  }
+  await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  const flashcards = await Flashcard.find({ document: req.params.docId, user: req.user._id }).sort({ createdAt: 1 });
+  res.json(flashcards);
 };
 
 // @desc    Toggle favorite status on a flashcard
 // @route   PUT /api/flashcards/:id/favorite
 // @access  Private
 export const toggleFavorite = async (req, res) => {
-  try {
-    const flashcard = await Flashcard.findById(req.params.id);
+  const flashcard = await findOwned(Flashcard, req.params.id, req.user._id, 'Flashcard');
+  flashcard.isFavorite = !flashcard.isFavorite;
+  await flashcard.save();
+  res.json({ message: 'Favorite status updated', isFavorite: flashcard.isFavorite, flashcard });
+};
 
-    if (!flashcard) {
-      return res.status(404).json({ message: 'Flashcard not found' });
-    }
+// @desc    Delete a flashcard
+// @route   DELETE /api/flashcards/:id
+// @access  Private
+export const deleteFlashcard = async (req, res) => {
+  const flashcard = await findOwned(Flashcard, req.params.id, req.user._id, 'Flashcard');
+  await flashcard.deleteOne();
+  res.json({ message: 'Flashcard deleted' });
+};
 
-    if (flashcard.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Not authorized for this flashcard' });
-    }
+const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+// Anki's text import splits on tabs/newlines, so flatten those inside fields
+const ankiCell = (value) => String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim();
 
-    flashcard.isFavorite = !flashcard.isFavorite;
-    await flashcard.save();
+// @desc    Export a document's flashcards as CSV or an Anki import file
+// @route   GET /api/flashcards/export/:docId?format=csv|anki
+// @access  Private
+export const exportFlashcards = async (req, res) => {
+  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  const { format } = req.validatedQuery;
+  const cards = await Flashcard.find({ document: document._id, user: req.user._id }).sort({ createdAt: 1 }).lean();
+  const base = document.title.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 60) || 'flashcards';
 
-    res.json({ message: 'Favorite status updated', isFavorite: flashcard.isFavorite, flashcard });
-  } catch (error) {
-    console.error('Error toggling favorite:', error);
-    res.status(500).json({ message: 'Server error updating flashcard' });
+  let body;
+  let filename;
+  if (format === 'anki') {
+    body = [
+      '#separator:tab',
+      '#html:false',
+      `#deck:${ankiCell(document.title)}`,
+      '#tags column:3',
+      ...cards.map((c) => [ankiCell(c.question), ankiCell(c.answer), ankiCell(c.topic).replace(/\s+/g, '_')].join('\t')),
+    ].join('\n');
+    filename = `${base}-anki.txt`;
+  } else {
+    // BOM so Excel opens UTF-8 CSVs correctly
+    body = '﻿' + ['question,answer,topic', ...cards.map((c) => [c.question, c.answer, c.topic].map(csvCell).join(','))].join('\r\n');
+    filename = `${base}.csv`;
   }
+
+  res.set({
+    'Content-Type': format === 'anki' ? 'text/plain; charset=utf-8' : 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="${filename}"`,
+  });
+  res.send(body);
 };

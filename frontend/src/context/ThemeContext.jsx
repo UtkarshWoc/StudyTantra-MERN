@@ -1,47 +1,41 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ThemeContext } from './theme';
 
-const ThemeContext = createContext();
+const readSavedTheme = () => {
+  try {
+    return localStorage.getItem('app-theme') || 'system';
+  } catch {
+    return 'system';
+  }
+};
+
+const applyTheme = (theme) => {
+  const root = window.document.documentElement;
+  const resolved = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
+  root.classList.remove('light', 'dark');
+  root.classList.add(resolved);
+};
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('system');
+  const [theme, setTheme] = useState(readSavedTheme);
 
-  // Load from local storage on mount
+  // Apply theme to the document element and persist it
   useEffect(() => {
-    const savedTheme = localStorage.getItem('app-theme');
-    if (savedTheme) {
-      setTheme(savedTheme);
+    applyTheme(theme);
+    try {
+      localStorage.setItem('app-theme', theme);
+    } catch {
+      // Storage can be unavailable (private mode); the theme still applies for this visit
     }
-  }, []);
-
-  // Apply theme to document element
-  useEffect(() => {
-    const root = window.document.documentElement;
-    
-    // Remove existing theme classes
-    root.classList.remove('light', 'dark');
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      root.classList.add(systemTheme);
-    } else {
-      root.classList.add(theme);
-    }
-
-    localStorage.setItem('app-theme', theme);
   }, [theme]);
 
-  // Listen for system theme changes if set to system
+  // Follow OS changes while set to "system"
   useEffect(() => {
+    if (theme !== 'system') return undefined;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      if (theme === 'system') {
-        const root = window.document.documentElement;
-        root.classList.remove('light', 'dark');
-        root.classList.add(e.matches ? 'dark' : 'light');
-      }
-    };
-    
-    // Modern API
+    const handleChange = () => applyTheme('system');
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
@@ -52,5 +46,3 @@ export const ThemeProvider = ({ children }) => {
     </ThemeContext.Provider>
   );
 };
-
-export const useTheme = () => useContext(ThemeContext);

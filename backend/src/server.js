@@ -1,27 +1,29 @@
+import "./instrument.js";
 import app from "./app.js";
 import connectDB from "./config/db.js";
-import dotenv from "dotenv";
+import { env } from "./config/env.js";
+import { logger } from "./config/logger.js";
+import { resumePendingIngestion } from "./services/ingestion/queue.js";
 
-dotenv.config();
-
-const PORT = process.env.PORT || 5000;
-
-// Catch any uncaught exceptions / unhandled rejections so they are logged
-// instead of silently crashing the process.
+// After an uncaught exception the process is in an unknown state: log and exit
+// so the platform (Railway) restarts a clean instance.
 process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION:', err);
+  logger.fatal({ err }, 'Uncaught exception');
+  process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('UNHANDLED REJECTION:', reason);
+  logger.error({ err: reason }, 'Unhandled rejection');
 });
 
 // Start HTTP server FIRST so Railway's health-check passes immediately,
 // then connect to MongoDB in the background.
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+app.listen(env.PORT, '0.0.0.0', () => {
+  logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
 
   // Connect to MongoDB after the server is already listening
-  connectDB().catch((err) => {
-    console.error('MongoDB connection failed (server still running):', err.message);
-  });
+  connectDB()
+    .then(() => resumePendingIngestion())
+    .catch((err) => {
+      logger.error({ err: err.message }, 'MongoDB connection failed (server still running)');
+    });
 });

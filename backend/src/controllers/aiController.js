@@ -1,35 +1,35 @@
 import Document from '../models/Document.js';
-import { generateDocumentSummaryFromUrl } from '../utils/geminiAI.js';
+import { summarize, explainSelection } from '../services/ai/index.js';
+import { buildStudySource, ensureReady } from '../services/studySource.js';
+import { retrieveChunks } from '../services/retrieval.js';
+import { findOwned } from '../utils/ownership.js';
 
 // @desc    Generate summary for a document
 // @route   POST /api/ai/summary/:docId
 // @access  Private
 export const createSummary = async (req, res) => {
-  try {
-    const document = await Document.findById(req.params.docId);
+  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  const { text } = await buildStudySource(document);
 
-    if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
+  const summary = await summarize({ source: { text } });
 
-    if (document.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Not authorized for this document' });
-    }
+  document.summary = summary;
+  await document.save();
 
-    if (!document.filePath) {
-      return res.status(404).json({ message: 'Document file URL missing' });
-    }
+  res.json({ message: 'Summary generated successfully', summary });
+};
 
-    // Send the Cloudinary URL directly to Gemini for processing
-    const summary = await generateDocumentSummaryFromUrl(document.filePath);
+// @desc    Explain (or simplify) a passage the student selected in the viewer
+// @route   POST /api/ai/explain/:docId
+// @access  Private
+export const explainPassage = async (req, res) => {
+  const document = await findOwned(Document, req.params.docId, req.user._id, 'Document');
+  ensureReady(document);
+  const { text, mode } = req.body;
 
-    // Save summary in database
-    document.summary = summary;
-    await document.save();
+  // Surrounding context helps resolve terms the passage refers to
+  const sources = await retrieveChunks({ documentIds: [document._id], query: text, k: 3 });
+  const explanation = await explainSelection({ selection: text, sources, mode });
 
-    res.json({ message: 'Summary generated successfully', summary });
-  } catch (error) {
-    console.error('Error generating summary:', error);
-    res.status(500).json({ message: 'Server error generating summary', error: error.message });
-  }
+  res.json({ explanation });
 };
