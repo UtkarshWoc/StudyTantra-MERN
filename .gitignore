@@ -23,3 +23,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Root package-lock (each workspace has its own lockfile)
+/package-lock.json
