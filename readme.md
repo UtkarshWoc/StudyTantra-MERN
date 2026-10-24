@@ -53,9 +53,10 @@ StudyTantra automates the loop that works: read, get questions generated, answer
 
 ### Documents
 
-- Upload PDFs (up to 10 MB). Files are private: they are stored with authenticated delivery and only ever served to their owner.
-- Background processing pipeline with live status and progress: per-page text extraction, automatic OCR for scanned PDFs, chunking and embeddings. Failed documents can be re-processed.
-- In-app PDF viewer. Select text to **Explain**, **Simplify**, **Make a flashcard** or **Ask in chat**.
+- Upload PDFs (up to 10 MB). Supported formats include standard and octet-stream MIME types with `%PDF-` magic-byte inspection (supporting UTF-8 BOM and scanner headers). Files are private: stored with authenticated delivery and only ever served to their owner.
+- Background processing pipeline with live status and progress: per-page text extraction, automatic OCR for scanned PDFs, chunking and embeddings. Failed documents or unreadable scans gracefully report actionable failure states and can be re-processed.
+- **Continuous vertical scroll PDF viewer** (default) and single-page viewer with responsive container scaling, zoom presets (Fit Width, Fit Page, 50%–200%), and dynamic `IntersectionObserver` page synchronization.
+- **Interactive passage tools**: Select text in the PDF to **Explain**, **Simplify**, **Make a flashcard**, or **Ask in chat**.
 - Rename documents, favourite them, search the library, and group documents into **collections** (for example "Semester 5 - DBMS").
 
 ### AI study tools
@@ -208,8 +209,10 @@ Citations are stored with each model message. Clicking one in the UI opens the P
 │   │   ├── e2e-server.js          Self-contained API: in-memory MongoDB, mock AI, local storage
 │   │   └── gemini-smoke.js        Optional real-Gemini smoke test
 │   ├── tests/                     API test suites (Vitest + Supertest)
+│   ├── package-lock.json          Backend lockfile (independent)
 │   └── .env.example
 ├── frontend/
+│   ├── public/                    study.png, favicon.ico, favicon.png, icons.svg
 │   ├── src/
 │   │   ├── App.jsx                Routes, route guards, lazy-loaded pages
 │   │   ├── main.jsx               Query client, Sentry, error boundary
@@ -220,10 +223,14 @@ Citations are stored with each model message. Clicking one in the UI opens the P
 │   │   ├── pages/                 One component per route
 │   │   └── index.css              Design tokens, glass-card utilities, keyframes
 │   ├── e2e/                       Playwright specs
+│   ├── package-lock.json          Frontend lockfile (independent)
 │   ├── vercel.json                SPA rewrite
 │   └── .env.example
+├── icons/
+│   └── study.png                  Source branding icon
 ├── docs/plans/                    Roadmap and earlier revamp plan
-├── .github/workflows/ci.yml       Backend, frontend and e2e jobs
+├── .github/workflows/ci.yml       Backend, frontend and e2e jobs (runs on Node 22)
+├── .npmrc                         legacy-peer-deps=true
 └── package.json                   Declares workspaces; `start` runs the backend
 ```
 
@@ -233,7 +240,9 @@ Citations are stored with each model message. Clicking one in the UI opens the P
 
 **Requirements:** Node.js 20 or newer, a MongoDB database (local or Atlas), and a [Gemini API key](https://aistudio.google.com/apikey). Cloudinary credentials are optional if you use local file storage.
 
-> The repo root declares npm workspaces, but each package keeps its own lockfile. Always install with `--workspaces=false`.
+> **Workspace & Dependency Architecture**:
+> The repo root declares npm workspaces, but `backend/` and `frontend/` each maintain their own independent lockfile. The root `package-lock.json` is intentionally excluded from Git to prevent workspace peer collisions.
+> In Node 22 / npm 10+, always install using `--workspaces=false --legacy-peer-deps` so optional peer dependencies (such as MongoDB's GCP KMS peers) resolve deterministically.
 
 ### Run the full stack
 
@@ -242,13 +251,13 @@ Citations are stored with each model message. Clicking one in the UI opens the P
 cd backend
 cp .env.example .env          # Windows cmd: copy .env.example .env
 # Edit .env: MONGO_URI, JWT_SECRET (16+ chars), GEMINI_API_KEY, and Cloudinary keys or STORAGE_DRIVER=local
-npm install --workspaces=false
+npm install --workspaces=false --legacy-peer-deps
 npm run dev                   # http://localhost:5000  (nodemon)
 
 # 2. Frontend (second terminal)
 cd frontend
 cp .env.example .env          # VITE_API_URL=http://localhost:5000
-npm install --workspaces=false
+npm install --workspaces=false --legacy-peer-deps
 npm run dev                   # http://localhost:5173
 ```
 
@@ -471,7 +480,11 @@ Messages are limited to 4000 characters.
 
 ### Ingestion
 
-`services/ingestion/ingest.js` is idempotent: re-running it replaces the document's pages and chunks. Text is extracted per page with `unpdf`. If the PDF averages fewer than 40 characters per page, it is treated as scanned and transcribed page by page with Gemini vision (`ocr: true`). Pages are split into overlapping sentence-aligned chunks of about 3200 characters (roughly 800 tokens) with 400 characters of overlap, each tagged with its page range, then embedded in batches of 50.
+`services/ingestion/ingest.js` is idempotent: re-running it replaces the document's pages and chunks. Text is extracted per page with `unpdf`. 
+- **Magic-byte validation**: The upload middleware and controller verify the PDF header `%PDF-` across the first 1024 bytes to accommodate UTF-8 byte-order marks (BOM) or scanner exporter preambles.
+- **OCR fallback**: If the PDF averages fewer than 40 characters per page, it is treated as scanned and transcribed page by page with Gemini vision (`ocr: true`).
+- **Zero-character guard**: If text extraction and OCR fallback both extract zero characters, the document status transitions to `failed` with a clear explanation instead of leaving an empty 0-chunk document.
+- **Chunking & Embeddings**: Pages are split into overlapping sentence-aligned chunks of about 3200 characters (roughly 800 tokens) with 400 characters of overlap, each tagged with its page range, then embedded in batches of 50.
 
 The queue is a small in-process worker pool (concurrency 2). It suits a single API instance; see [Known limitations](#17-known-limitations).
 
@@ -515,7 +528,7 @@ The planner sends the AI your documents (title, known topics, short summary), th
 
 ### File storage
 
-With Cloudinary, PDFs are uploaded as `raw` assets with `type: authenticated` and read back through signed URLs server-side. With the local driver they are written to disk. In both cases the browser never receives a storage URL: it requests `GET /api/documents/:id/file`, which checks ownership. Documents uploaded before private storage existed still resolve through their legacy URL. Uploads are checked by their `%PDF-` magic bytes, not just the declared MIME type.
+With Cloudinary, PDFs are uploaded as `raw` assets with `type: authenticated` and read back through signed URLs server-side. With the local driver they are written to disk. In both cases the browser never receives a storage URL: it requests `GET /api/documents/:id/file`, which checks ownership. Documents uploaded before private storage existed still resolve through their legacy URL. Uploads are checked by their `%PDF-` magic bytes, not just the declared MIME type. The frontend passes raw binary blobs directly to the PDF viewer to avoid object URL revocation race conditions in React 19.
 
 ---
 
@@ -560,6 +573,16 @@ The interface is dark-first: a deep navy base (`#0b1120`) with an amber accent. 
 | `animate-fade-in`, `animate-slide-up`, `animate-scale-in`, ... | Keyframe animations registered as Tailwind theme animations |
 
 Charts and the heatmap are hand-rolled SVG/CSS components (`ActivityHeatmap`, `GoalMeter`) with no charting dependency.
+
+### In-app PDF Viewer (`PdfViewer.jsx`)
+
+The document reader is built on `react-pdf` and customized for deep study workflows:
+- **Continuous Top-to-Down Vertical Scroll (Default)**: Renders all pages sequentially in a continuous scroll container, allowing natural reading from top to bottom.
+- **Dynamic Scroll Synchronization**: Uses an `IntersectionObserver` to track the visible page in the viewport, syncing the page counter (`X / Y`) and page input automatically without cascading re-renders.
+- **Programmatic Citation Jumping**: Clicking any page citation in Chat or summaries smoothly scrolls directly to that page element.
+- **View Mode Toggle**: Users can toggle between Continuous Scroll mode and single-page view.
+- **Responsive Layout & Zoom**: Monitors container dimensions with `ResizeObserver` to resize canvas width dynamically, with preset zoom options (*Fit Width*, *Fit Page*, 50%–200%).
+- **Interactive Passage Toolbar**: Text selection triggers a floating action bar allowing one-click **Explain**, **Simplify**, **Create Flashcard**, or **Send to Chat**.
 
 ---
 
@@ -622,8 +645,8 @@ cd backend  && npm run smoke:gemini    # optional, uses your real key
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and on pushes to `main`, on Node 22:
 
-1. **backend**: install, `npm test` (with a cached MongoDB binary).
-2. **frontend**: install, lint, test, build.
+1. **backend**: runs `npm ci --workspaces=false --legacy-peer-deps` and `npm test` (73 tests across 7 test suites, using in-memory MongoDB). `vite` is explicitly pinned in `backend/package.json`'s `devDependencies` so Vitest resolves in isolated peer-dep environments.
+2. **frontend**: runs `npm ci --workspaces=false --legacy-peer-deps`, `npm run lint`, `npm test` (20 tests across 9 test suites), and `npm run build`. `@testing-library/dom` is explicitly declared in `frontend/package.json`'s `devDependencies` for Jest-DOM compatibility.
 3. **e2e**: after the two above pass, installs Chromium and runs Playwright; uploads traces as an artifact on failure.
 
 The Gemini smoke test is intentionally excluded from CI.
@@ -716,7 +739,10 @@ Phases 0 to 3 of [`docs/plans/level-up-and-productization-plan.md`](docs/plans/l
 | Document stays on "Processing" | Check the server log. Large or scanned PDFs take longer. If it is `failed`, use Retry |
 | "This document is still being processed" | Chat and generation wait for `status: ready` |
 | No verification or reset email arrives | `RESEND_API_KEY` is unset, so the link was written to the server log. Set the key and a verified `EMAIL_FROM` |
-| `npm install` behaves oddly at the repo root | Each package has its own lockfile. Install inside `backend/` and `frontend/` with `--workspaces=false` |
+| `npm install` behaves oddly at the repo root | Each package has its own lockfile. Install inside `backend/` and `frontend/` with `--workspaces=false --legacy-peer-deps`. Do not commit a root `package-lock.json` |
+| `npm ci` fails with `Missing: gcp-metadata from lock file` | npm 10 peer dependency conflict with MongoDB and Google Cloud SDKs. Use `--legacy-peer-deps` on `npm ci` and ensure no accidental root `package-lock.json` is committed |
+| Vitest fails with `Cannot find package 'vite'` or `'@testing-library/dom'` | Peer dependencies skipped during legacy install. Ensure `"vite"` is in `backend/package.json` devDependencies and `"@testing-library/dom"` is in `frontend/package.json` devDependencies |
+| Vite dev server fails with `Cannot find module .../dist.js` | Concurrently running `npm install` while `vite` was executing on Windows locked native binaries. Stop Vite and run `npm install --workspaces=false --legacy-peer-deps` in `frontend` |
 | Google button missing | Set both `GOOGLE_CLIENT_ID` (backend) and `VITE_GOOGLE_CLIENT_ID` (frontend) to the same OAuth client ID |
 | Hourly AI limit reached | Raise `AI_RATE_LIMIT_PER_HOUR`, or wait for the window to reset |
 
