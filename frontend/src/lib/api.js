@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-export const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
+const rawApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+export const API_BASE = `${rawApiUrl}/api`;
 
 // The access token lives only in memory (never localStorage) so XSS can't
 // exfiltrate a long-lived credential. The refresh token is an httpOnly cookie.
