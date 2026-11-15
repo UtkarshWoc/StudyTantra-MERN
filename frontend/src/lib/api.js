@@ -19,7 +19,9 @@ api.interceptors.request.use((config) => {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz) config.headers['X-Timezone'] = tz;
-  } catch {}
+  } catch {
+    // Ignore environments where Intl timezone is unavailable or fails
+  }
   return config;
 });
 
