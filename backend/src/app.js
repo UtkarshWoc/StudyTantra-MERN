@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 import pinoHttp from "pino-http";
 import * as Sentry from "@sentry/node";
 
-import { env } from "./config/env.js";
+import { env, isProd } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import authRoutes from "./routes/authRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
@@ -27,8 +27,12 @@ app.set('trust proxy', 1);
 // CORS: Must be defined before other middlewares so rejected requests still get CORS headers
 const normalizeOrigin = (o) => o.trim().replace(/\/+$/, '').toLowerCase();
 
+const LOCALHOST_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+
 const allowedOrigins = new Set([
   'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
   'http://localhost:3000',
   'https://study-tantra-mern.vercel.app',
   // Supports a comma-separated list of origins
@@ -39,7 +43,12 @@ app.use(cors({
   origin: function (origin, callback) {
     // Requests with no Origin (curl, server-to-server) are allowed. Browser origins
     // must match exactly — a prefix check would let "https://app.vercel.app.evil.com" in.
-    callback(null, !origin || allowedOrigins.has(normalizeOrigin(origin)));
+    if (!origin) return callback(null, true);
+    const normalized = normalizeOrigin(origin);
+    if (!isProd && LOCALHOST_PATTERN.test(normalized)) {
+      return callback(null, true);
+    }
+    callback(null, allowedOrigins.has(normalized));
   },
   methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-Timezone'],
