@@ -29,9 +29,18 @@ const schema = z.object({
   CLOUDINARY_API_KEY: optionalString,
   CLOUDINARY_API_SECRET: optionalString,
 
-  // Email (password reset / verification). Without RESEND_API_KEY emails are logged.
+  // Email (Nodemailer / SMTP or Resend)
   RESEND_API_KEY: optionalString,
   EMAIL_FROM: z.string().default('StudyTantra <onboarding@resend.dev>'),
+  SMTP_HOST: optionalString,
+  SMTP_PORT: z.preprocess((v) => (v === '' || v === undefined ? undefined : Number(v)), z.number().int().positive().optional()),
+  SMTP_USER: optionalString,
+  SMTP_PASS: optionalString,
+  SMTP_SECURE: z.preprocess((v) => (v === 'true' || v === true ? true : false), z.boolean().default(false)),
+  SMTP_SERVICE: optionalString,
+  EMAIL_SERVICE: optionalString,
+  EMAIL_USER: optionalString,
+  EMAIL_PASS: optionalString,
 
   GOOGLE_CLIENT_ID: optionalString,
   SENTRY_DSN: optionalString,
