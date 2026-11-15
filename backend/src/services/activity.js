@@ -3,7 +3,7 @@ import Activity from '../models/Activity.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import { logger } from '../config/logger.js';
 
-const STUDY_TYPES = ['review', 'quiz'];
+const STUDY_TYPES = ['review', 'quiz', 'upload', 'chat', 'generate'];
 
 /**
  * Record a study event. Never throws: logging must not break the action itself.
@@ -43,18 +43,19 @@ export const shiftKey = (key, days) => {
  * Activity counts per local day over the last `days` days: [{ date, count }].
  */
 export const activityHeatmap = async (userId, timezone, days = 365) => {
-  const today = dayKey(new Date(), timezone);
+  const safeTz = (timezone && isValidTimezone(timezone)) ? timezone : 'UTC';
+  const today = dayKey(new Date(), safeTz);
   const start = shiftKey(today, -(days - 1));
   const rows = await Activity.aggregate([
     { $match: { user: new mongoose.Types.ObjectId(String(userId)), type: { $in: STUDY_TYPES }, createdAt: { $gte: new Date(Date.now() - (days + 1) * 86400000) } } },
-    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone } }, count: { $sum: 1 } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: safeTz } }, count: { $sum: 1 } } },
   ]);
   const counts = new Map(rows.map((r) => [r._id, r.count]));
   return dayRange(start, days).map((date) => ({ date, count: counts.get(date) || 0 }));
 };
 
 /**
- * Current and longest streak of consecutive days with any review or quiz.
+ * Current and longest streak of consecutive days with any review, quiz, or learning activity.
  * Today not studied yet doesn't break the current streak until the day ends.
  */
 export const streaks = (heatmap) => {
@@ -76,10 +77,11 @@ export const streaks = (heatmap) => {
 };
 
 export const countToday = (userId, type, timezone) => {
-  const today = dayKey(new Date(), timezone);
+  const safeTz = (timezone && isValidTimezone(timezone)) ? timezone : 'UTC';
+  const today = dayKey(new Date(), safeTz);
   return Activity.aggregate([
     { $match: { user: new mongoose.Types.ObjectId(String(userId)), type, createdAt: { $gte: new Date(Date.now() - 2 * 86400000) } } },
-    { $project: { day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone } }, meta: 1 } },
+    { $project: { day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: safeTz } }, meta: 1 } },
     { $match: { day: today } },
     { $group: { _id: null, count: { $sum: 1 }, newCards: { $sum: { $cond: ['$meta.wasNew', 1, 0] } } } },
   ]).then((r) => ({ count: r[0]?.count || 0, newCards: r[0]?.newCards || 0 }));

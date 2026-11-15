@@ -3,7 +3,7 @@ import Document from '../models/Document.js';
 import Flashcard from '../models/Flashcard.js';
 import StudyPlan from '../models/StudyPlan.js';
 import { State } from '../services/srs.js';
-import { activityHeatmap, streaks, countToday, topicStats, isWeak, dayKey } from '../services/activity.js';
+import { activityHeatmap, streaks, countToday, topicStats, isWeak, dayKey, isValidTimezone } from '../services/activity.js';
 
 const withTitles = async (rows, key = 'document') => {
   const ids = [...new Set(rows.map((r) => String(r[key])).filter((id) => id !== 'undefined' && id !== 'null'))];
@@ -17,7 +17,14 @@ const withTitles = async (rows, key = 'document') => {
 // @access  Private
 export const getOverview = async (req, res) => {
   const userId = req.user._id;
-  const { timezone = 'UTC', dailyGoal = 20, newCardsPerDay = 20 } = req.user.preferences || {};
+  const clientTz = req.headers['x-timezone'];
+  const userTz = req.user.preferences?.timezone;
+  const timezone = (clientTz && isValidTimezone(clientTz))
+    ? clientTz
+    : (userTz && isValidTimezone(userTz))
+      ? userTz
+      : 'UTC';
+  const { dailyGoal = 20, newCardsPerDay = 20 } = req.user.preferences || {};
   const now = new Date();
   const today = dayKey(now, timezone);
 

@@ -60,6 +60,7 @@ export const flashcardFromSelection = async (req, res) => {
   if (!card) throw new HttpError(502, 'The AI could not make a flashcard from that selection.');
 
   const flashcard = await Flashcard.create(card);
+  await recordActivity(req.user._id, 'generate', { document: document._id, meta: { kind: 'flashcards', count: 1 } });
   res.status(201).json({ flashcard });
 };
 

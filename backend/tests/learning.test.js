@@ -104,7 +104,7 @@ describe('insights', () => {
     expect(res.body.streak).toMatchObject({ current: 1, studiedToday: true });
     expect(res.body.goal).toEqual({ target: 5, done: 1 });
     expect(res.body.heatmap).toHaveLength(365);
-    expect(res.body.heatmap.at(-1)).toEqual({ date: res.body.today, count: 2 });
+    expect(res.body.heatmap.at(-1)).toEqual({ date: res.body.today, count: 5 });
     expect(res.body.weakTopics[0]).toMatchObject({ documentTitle: 'Biology Notes', accuracy: 0 });
     expect(res.body.recentActivity.map((a) => a.type)).toEqual(expect.arrayContaining(['review', 'quiz', 'upload']));
 

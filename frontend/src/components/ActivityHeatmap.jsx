@@ -1,10 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 
-// Sequential, one hue (amber 800→500), validated with the dataviz ordinal check
-// against the #111827 surface: lightness rises with activity. Zero days use a
-// neutral slate step so "no study" never reads as "a little study".
+// Sequential golden-amber palette calibrated for dark surfaces (#111827 / #0b1120).
+// Lightness rises with activity; level 1 (#d97706) provides clear contrast against EMPTY (#1e293b).
 const EMPTY = '#1e293b';
-const RAMP = ['#92400e', '#b45309', '#d97706', '#f59e0b'];
+const RAMP = ['#d97706', '#f59e0b', '#fbbf24', '#fef08a'];
 const BUCKETS = [1, 5, 15, 30]; // lower bounds for RAMP steps
 
 const colorFor = (count) => {
@@ -22,16 +21,27 @@ const formatDay = (key) =>
   new Date(`${key}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
 /**
- * GitHub-style calendar of study activity (reviews + quizzes per day).
+ * GitHub-style calendar of study activity.
  * days: [{ date: 'YYYY-MM-DD', count }] oldest → newest.
  */
 const ActivityHeatmap = ({ days = [] }) => {
   const [hover, setHover] = useState(null); // { day, x, y }
 
   const { weeks, monthLabels, total, activeDays } = useMemo(() => {
+    // Fallback if days is empty: generate 365 days of empty slots so the grid is never 0 width
+    let effectiveDays = days;
+    if (!effectiveDays || effectiveDays.length === 0) {
+      const today = new Date();
+      effectiveDays = Array.from({ length: 365 }, (_, i) => {
+        const d = new Date(today);
+        d.setUTCDate(d.getUTCDate() - (364 - i));
+        return { date: d.toISOString().slice(0, 10), count: 0 };
+      });
+    }
+
     // Pad the start so each column is a Sunday→Saturday week
-    const firstDow = days.length ? new Date(`${days[0].date}T00:00:00Z`).getUTCDay() : 0;
-    const cells = [...Array(firstDow).fill(null), ...days];
+    const firstDow = effectiveDays.length ? new Date(`${effectiveDays[0].date}T00:00:00Z`).getUTCDay() : 0;
+    const cells = [...Array(firstDow).fill(null), ...effectiveDays];
     const cols = [];
     for (let i = 0; i < cells.length; i += 7) cols.push(cells.slice(i, i + 7));
 
@@ -47,17 +57,24 @@ const ActivityHeatmap = ({ days = [] }) => {
     return {
       weeks: cols,
       monthLabels: labels,
-      total: days.reduce((n, d) => n + d.count, 0),
-      activeDays: days.filter((d) => d.count > 0).length,
+      total: effectiveDays.reduce((n, d) => n + (d?.count || 0), 0),
+      activeDays: effectiveDays.filter((d) => (d?.count || 0) > 0).length,
     };
   }, [days]);
 
   const width = weeks.length * (CELL + GAP);
   const height = 7 * (CELL + GAP) + 16;
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [weeks]);
 
   return (
     <figure className="relative">
-      <div className="overflow-x-auto pb-1">
+      <div ref={scrollRef} className="overflow-x-auto pb-1">
         <svg
           width={width}
           height={height}
@@ -77,6 +94,9 @@ const ActivityHeatmap = ({ days = [] }) => {
               height={CELL}
               rx={2}
               fill={colorFor(day.count)}
+              stroke={day.count ? 'none' : 'rgba(255, 255, 255, 0.05)'}
+              strokeWidth={day.count ? 0 : 0.5}
+              className="transition-colors duration-150"
               onMouseEnter={(e) => {
                 const box = e.currentTarget.ownerSVGElement.getBoundingClientRect();
                 const r = e.currentTarget.getBoundingClientRect();
@@ -93,7 +113,7 @@ const ActivityHeatmap = ({ days = [] }) => {
         <div
           role="tooltip"
           style={{ left: hover.x, top: hover.y - 8 }}
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-[#0b1120] border border-[#334155] px-2.5 py-1.5 text-xs shadow-xl"
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-[#0b1120] border border-[#334155] px-2.5 py-1.5 text-xs shadow-xl z-20"
         >
           <span className="font-semibold text-slate-100">{hover.day.count} {hover.day.count === 1 ? 'activity' : 'activities'}</span>
           <span className="text-slate-400"> · {formatDay(hover.day.date)}</span>
@@ -101,10 +121,10 @@ const ActivityHeatmap = ({ days = [] }) => {
       )}
 
       <figcaption className="flex flex-wrap items-center justify-between gap-2 mt-2 text-xs text-slate-400">
-        <span>{total} reviews & quizzes · {activeDays} active days</span>
+        <span>{total} {total === 1 ? 'activity' : 'activities'} · {activeDays} active days</span>
         <span className="flex items-center gap-1" aria-hidden="true">
           Less
-          {[EMPTY, ...RAMP].map((c) => <span key={c} className="inline-block w-[11px] h-[11px] rounded-[2px]" style={{ background: c }} />)}
+          {[EMPTY, ...RAMP].map((c) => <span key={c} className="inline-block w-[11px] h-[11px] rounded-[2px] border border-white/[0.04]" style={{ background: c }} />)}
           More
         </span>
       </figcaption>

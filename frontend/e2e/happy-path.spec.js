@@ -70,7 +70,7 @@ test('wrong password shows an error without reloading', async ({ page }) => {
   await page.goto('/login');
   await page.locator('#email').fill('nobody@example.com');
   await page.locator('#password').fill('wrong-password');
-  await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
   await expect(page.getByText('Invalid email or password')).toBeVisible();
   await expect(page).toHaveURL(/\/login/);
 });

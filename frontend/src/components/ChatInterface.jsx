@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Loader2, Square, Trash2, BookOpen } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useChatHistory, useClearChat, chatPath, chatKey } from '../api/hooks';
+import { useChatHistory, useClearChat, chatPath, chatKey, keys } from '../api/hooks';
 import { streamChat } from '../lib/chatStream';
 import Markdown from './Markdown';
 
@@ -89,11 +89,17 @@ const ChatInterface = ({ documentId, collectionId, documentTitle, ready = true, 
         onSources: ({ citations }) => setPending((p) => ({ ...p, citations })),
         onToken: (text) => setPending((p) => ({ ...p, answer: p.answer + text })),
       });
-      if (finalHistory) queryClient.setQueryData(chatKey(target), finalHistory);
+      if (finalHistory) {
+        queryClient.setQueryData(chatKey(target), finalHistory);
+        queryClient.invalidateQueries({ queryKey: ['insights'] });
+        queryClient.invalidateQueries({ queryKey: keys.dashboard });
+      }
       setPending(null);
     } catch (error) {
       if (controller.signal.aborted) {
         await queryClient.invalidateQueries({ queryKey: chatKey(target) });
+        queryClient.invalidateQueries({ queryKey: ['insights'] });
+        queryClient.invalidateQueries({ queryKey: keys.dashboard });
         setPending(null);
       } else {
         setPending((p) => ({ ...p, error: error.message }));

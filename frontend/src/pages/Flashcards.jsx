@@ -4,7 +4,7 @@ import FlashcardViewer from '../components/FlashcardViewer';
 import GenerationOptions from '../components/GenerationOptions';
 import DocumentStatus from '../components/DocumentStatus';
 import { Layers, Loader2, Zap, Trash2, List, Brain, Download } from 'lucide-react';
-import { useDocuments, useFlashcards, useGenerateFlashcards, useDeleteFlashcard } from '../api/hooks';
+import { useDocuments, useFlashcards, useGenerateFlashcards, useDeleteFlashcard, useSubmitReview } from '../api/hooks';
 import { getErrorMessage } from '../lib/api';
 import { defaultOptions, toRequestBody } from '../lib/generation';
 import { downloadFromApi } from '../lib/download';
@@ -47,6 +47,7 @@ const Flashcards = () => {
   const { data: cards, isLoading: loadingCards } = useFlashcards(selectedDocId);
   const flashcards = cards ? cards.map(toViewerCard) : null;
   const deleteCard = useDeleteFlashcard(selectedDocId);
+  const submitReview = useSubmitReview();
 
   const generate = useGenerateFlashcards(selectedDocId);
   const generating = generate.isPending;
@@ -148,7 +149,7 @@ const Flashcards = () => {
               </div>
             </div>
             {view === 'study'
-              ? <FlashcardViewer key={`${selectedDocId}-${cards.length}`} cards={flashcards} />
+              ? <FlashcardViewer key={`${selectedDocId}-${cards.length}`} cards={flashcards} onCardReviewed={(id, rating) => submitReview.mutate({ id, rating })} />
               : <DeckList cards={cards} onDelete={(id) => deleteCard.mutate(id)} />}
           </>
         ) : selectedDocId && !generating && flashcards !== null ? (

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { startDb, stopDb, clearDb, api, registerUser, auth } from './helpers.js';
 import { testOutbox } from '../src/services/email.js';
+import { env } from '../src/config/env.js';
 import Session from '../src/models/Session.js';
 
 const tokenFromEmail = (email) => decodeURIComponent(email.text.match(/token=([^\s&]+)/)[1]);
@@ -157,6 +158,7 @@ describe('profile & account', () => {
   });
 
   it('google sign-in reports 501 when not configured', async () => {
-    await api().post('/api/auth/google').send({ credential: 'x'.repeat(20) }).expect(501);
+    const expected = env.GOOGLE_CLIENT_ID ? 401 : 501;
+    await api().post('/api/auth/google').send({ credential: 'x'.repeat(20) }).expect(expected);
   });
 });

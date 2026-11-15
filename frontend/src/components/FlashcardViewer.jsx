@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { RotateCcw, Check, X as XIcon, Flame, AlertTriangle, RefreshCw } from 'lucide-react';
 
-const FlashcardViewer = ({ cards = [] }) => {
+const FlashcardViewer = ({ cards = [], onCardReviewed }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [results, setResults] = useState([]);
@@ -107,6 +107,9 @@ const FlashcardViewer = ({ cards = [] }) => {
 
   const handleAnswer = (known) => {
     setResults([...results, { id: currentCard.id, topic: currentCard.topic, known }]);
+    if (onCardReviewed && currentCard.id) {
+      onCardReviewed(currentCard.id, known ? 3 : 1);
+    }
     setIsFlipped(false);
     setTimeout(() => { setCurrentIndex(prev => prev + 1); }, 150);
   };

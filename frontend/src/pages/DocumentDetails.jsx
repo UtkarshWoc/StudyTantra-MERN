@@ -121,7 +121,15 @@ const DocumentDetails = () => {
         <h1 className="text-base font-bold text-slate-100 truncate flex-1 min-w-0">{document.title}</h1>
         <DocumentStatus document={document} onRetry={() => reprocess.mutate()} retrying={reprocess.isPending} />
         {fileUrl && (
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-xs text-amber-400 hover:text-amber-300 font-medium gap-1 transition-colors">
+          // `fileUrl` is a blob URL (object URL) created in this document, so it
+          // can't be opened in a new tab (target="_blank" + noopener severs the
+          // blob's document scope). Download it in place instead so the link
+          // actually works without navigating away from the viewer.
+          <a
+            href={fileUrl}
+            download={document.filename}
+            className="flex items-center text-xs text-amber-400 hover:text-amber-300 font-medium gap-1 transition-colors"
+          >
             <ExternalLink size={14} /> Open PDF
           </a>
         )}
