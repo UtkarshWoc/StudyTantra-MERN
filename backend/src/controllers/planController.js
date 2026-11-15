@@ -5,7 +5,7 @@ import Flashcard from '../models/Flashcard.js';
 import Quiz from '../models/Quiz.js';
 import DocumentPage from '../models/DocumentPage.js';
 import { generateStudyPlan } from '../services/ai/index.js';
-import { topicStats, isWeak, dayKey, dayRange, shiftKey } from '../services/activity.js';
+import { topicStats, isWeak, dayKey, dayRange, shiftKey, recordActivity } from '../services/activity.js';
 import { findOwned } from '../utils/ownership.js';
 import { badRequest, HttpError, notFoundError } from '../utils/httpError.js';
 
@@ -120,6 +120,9 @@ export const updatePlanTask = async (req, res) => {
   if (!task) throw notFoundError('Task not found');
   task.done = req.body.done;
   await plan.save();
+  if (task.done) {
+    await recordActivity(req.user._id, 'review', { document: task.document, meta: { planId: plan._id, taskTitle: task.title } });
+  }
   res.json({ task, progress: summarizePlan(plan) });
 };
 

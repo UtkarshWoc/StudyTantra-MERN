@@ -16,6 +16,10 @@ export const api = axios.create({ baseURL: API_BASE, withCredentials: true });
 
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz) config.headers['X-Timezone'] = tz;
+  } catch {}
   return config;
 });
 

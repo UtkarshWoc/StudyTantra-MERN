@@ -58,7 +58,7 @@ test('spaced repetition, streak, planner and collections', async ({ page }) => {
   await page.getByRole('button', { name: 'cells', exact: true }).click();
   await page.getByRole('button', { name: /create plan/i }).click();
   await expect(page.getByRole('heading', { name: 'Biology final' })).toBeVisible();
-  await page.getByRole('checkbox').first().check();
+  await page.getByRole('checkbox').first().click();
   await expect(page.getByText(/1\/\d+ done/)).toBeVisible();
 
   // Collection with cross-document chat

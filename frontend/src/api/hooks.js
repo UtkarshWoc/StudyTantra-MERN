@@ -69,6 +69,7 @@ export const useUploadDocument = () => {
       qc.setQueryData(keys.document(doc._id), doc);
       qc.invalidateQueries({ queryKey: keys.documents });
       qc.invalidateQueries({ queryKey: keys.dashboard });
+      qc.invalidateQueries({ queryKey: ['insights'] });
     },
   });
 };
@@ -161,6 +162,7 @@ export const useGenerateFlashcards = (docId) => {
     onSuccess: (data) => {
       qc.setQueryData(keys.flashcards(docId), data.flashcards);
       qc.invalidateQueries({ queryKey: keys.dashboard });
+      qc.invalidateQueries({ queryKey: ['insights'] });
     },
   });
 };
@@ -172,6 +174,7 @@ export const useFlashcardFromSelection = (docId) => {
     onSuccess: (card) => {
       qc.setQueryData(keys.flashcards(docId), (cards) => (cards ? [...cards, card] : cards));
       qc.invalidateQueries({ queryKey: keys.dashboard });
+      qc.invalidateQueries({ queryKey: ['insights'] });
     },
   });
 };
@@ -186,7 +189,10 @@ export const useDeleteFlashcard = (docId) => {
       return { previous };
     },
     onError: (err, id, ctx) => qc.setQueryData(keys.flashcards(docId), ctx?.previous),
-    onSettled: () => qc.invalidateQueries({ queryKey: keys.dashboard }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: keys.dashboard });
+      qc.invalidateQueries({ queryKey: ['insights'] });
+    },
   });
 };
 
@@ -202,6 +208,7 @@ export const useGenerateQuiz = (docId) => {
     onSuccess: (data) => {
       qc.setQueryData(keys.quizzes(docId), (quizzes = []) => [data.quiz, ...quizzes]);
       qc.invalidateQueries({ queryKey: keys.dashboard });
+      qc.invalidateQueries({ queryKey: ['insights'] });
     },
   });
 };
@@ -216,6 +223,7 @@ export const useSubmitQuiz = (docId) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.quizzes(docId) });
       qc.invalidateQueries({ queryKey: keys.dashboard });
+      qc.invalidateQueries({ queryKey: ['insights'] });
     },
   });
 };
@@ -279,7 +287,13 @@ export const useSubmitReview = () => {
 
 // ---- Insights ----
 
-export const useInsights = () => useQuery({ queryKey: ['insights', 'overview'], queryFn: () => get('/insights/overview') });
+export const useInsights = () =>
+  useQuery({
+    queryKey: ['insights', 'overview'],
+    queryFn: () => get('/insights/overview'),
+    staleTime: 5000,
+    refetchOnMount: 'always',
+  });
 
 export const useTopics = (documentId) =>
   useQuery({
@@ -320,7 +334,10 @@ export const useGenerateCollectionQuiz = (collectionId) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) => api.post(`/quizzes/generate/collection/${collectionId}`, body).then((r) => r.data),
-    onSuccess: (data) => qc.setQueryData(['quizzes', 'collection', collectionId], (quizzes = []) => [data.quiz, ...quizzes]),
+    onSuccess: (data) => {
+      qc.setQueryData(['quizzes', 'collection', collectionId], (quizzes = []) => [data.quiz, ...quizzes]);
+      qc.invalidateQueries({ queryKey: ['insights'] });
+    },
   });
 };
 
