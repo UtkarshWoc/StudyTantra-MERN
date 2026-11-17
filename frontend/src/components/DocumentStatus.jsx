@@ -2,16 +2,15 @@ import React from 'react';
 import { Loader2, AlertTriangle, CheckCircle2, ScanText } from 'lucide-react';
 
 /**
- * Small badge for a document's ingestion state. `compact` hides the label text
- * for "ready" so library cards stay quiet once everything works.
+ * Sahara styled badge for a document's ingestion state.
  */
 const DocumentStatus = ({ document, onRetry, retrying, compact = false }) => {
   if (!document) return null;
 
   if (document.status === 'processing') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-300" role="status">
-        <Loader2 size={14} className="animate-spin" />
+      <span className="inline-flex items-center gap-1.5 text-xs font-label font-semibold text-primary" role="status">
+        <Loader2 size={13} className="animate-spin" />
         Processing{document.progress ? ` ${document.progress}%` : '...'}
       </span>
     );
@@ -19,13 +18,16 @@ const DocumentStatus = ({ document, onRetry, retrying, compact = false }) => {
 
   if (document.status === 'failed') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400" role="alert">
-        <AlertTriangle size={14} />
+      <span className="inline-flex items-center gap-1.5 text-xs font-label font-semibold text-error" role="alert">
+        <AlertTriangle size={13} />
         {compact ? 'Failed' : document.processingError || 'Processing failed'}
         {onRetry && (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onRetry(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRetry();
+            }}
             disabled={retrying}
             className="ml-1 underline cursor-pointer disabled:opacity-50"
           >
@@ -37,13 +39,18 @@ const DocumentStatus = ({ document, onRetry, retrying, compact = false }) => {
   }
 
   if (compact) {
-    return document.ocr ? <span className="inline-flex items-center gap-1 text-xs text-slate-400" title="Text recognised with OCR"><ScanText size={13} /> OCR</span> : null;
+    return document.ocr ? (
+      <span className="inline-flex items-center gap-1 text-[11px] font-label text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded" title="Text recognised with OCR">
+        <ScanText size={12} /> OCR
+      </span>
+    ) : null;
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-      <CheckCircle2 size={14} />
-      Ready{document.pageCount ? ` · ${document.pageCount} page${document.pageCount === 1 ? '' : 's'}` : ''}{document.ocr ? ' · OCR' : ''}
+    <span className="inline-flex items-center gap-1.5 text-xs font-label font-semibold text-emerald-700 dark:text-emerald-400">
+      <CheckCircle2 size={13} />
+      Ready{document.pageCount ? ` · ${document.pageCount} page${document.pageCount === 1 ? '' : 's'}` : ''}
+      {document.ocr ? ' · OCR' : ''}
     </span>
   );
 };
