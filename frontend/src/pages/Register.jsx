@@ -159,7 +159,7 @@ const Register = () => {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-label font-bold tracking-widest uppercase text-primary">
-                      <span className="material-symbols-outlined text-sm">badge</span> Scholar Onboarding
+                      <span className="material-symbols-outlined text-sm">badge</span> Get Started
                     </span>
                     <span className="text-[10px] font-label text-outline">100% Free</span>
                   </div>
@@ -167,7 +167,7 @@ const Register = () => {
                     Create Your Account
                   </h2>
                   <p className="text-xs text-on-surface-variant font-body mt-1 leading-relaxed">
-                    Set up your learning profile to begin structuring active recall vaults.
+                    Set up your account to start studying with flashcards, quizzes, and summaries.
                   </p>
                 </div>
 
@@ -203,7 +203,7 @@ const Register = () => {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className={authInputClass}
-                        placeholder="Arya Sharma"
+                        placeholder="Your Name"
                         autoComplete="name"
                       />
                     </div>
@@ -211,7 +211,7 @@ const Register = () => {
 
                   <div>
                     <label htmlFor="email" className="block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                      Academic Email
+                      Email Address
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
@@ -221,7 +221,7 @@ const Register = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className={authInputClass}
-                        placeholder="arya.sharma@university.edu"
+                        placeholder="name@example.com"
                         autoComplete="email"
                       />
                     </div>
@@ -275,11 +275,11 @@ const Register = () => {
                     {isLoading ? (
                       <>
                         <Loader2 className="animate-spin" size={16} />
-                        <span>Creating Scholar Account...</span>
+                        <span>Creating Account...</span>
                       </>
                     ) : (
                       <>
-                        <span>Join StudyTantra</span>
+                        <span>Create Account</span>
                         <ArrowRight size={15} />
                       </>
                     )}
@@ -289,7 +289,7 @@ const Register = () => {
                 <p className="text-center text-xs text-on-surface-variant font-label mt-6">
                   Already registered?{' '}
                   <Link to="/login" className="font-semibold text-primary hover:underline">
-                    Sign in to your vault
+                    Sign In
                   </Link>
                 </p>
               </div>

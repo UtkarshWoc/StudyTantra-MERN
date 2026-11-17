@@ -112,7 +112,7 @@ const ReviewSession = ({ initialCards, onFinished }) => {
         <h2 className="font-headline text-3xl font-bold text-on-surface mb-2">Session complete</h2>
         <p className="text-xs sm:text-sm text-on-surface-variant mb-6 leading-relaxed">
           You reviewed {stats.reviewed} card{stats.reviewed === 1 ? '' : 's'}
-          {stats.again ? `, and repeated ${stats.again} for memory reinforcement` : ''}. Your FSRS decay intervals have been calibrated.
+          {stats.again ? `, and repeated ${stats.again} for memory reinforcement` : ''}. Your review intervals have been updated.
         </p>
         <div className="flex justify-center gap-3">
           <button
@@ -147,7 +147,7 @@ const ReviewSession = ({ initialCards, onFinished }) => {
             </Link>
             <div>
               <span className="text-[10px] font-label font-bold uppercase tracking-widest text-primary block leading-none">
-                Active Recall Session • FSRS v4.5
+                Review Session
               </span>
               <span className="font-headline text-base sm:text-lg font-bold text-on-surface leading-tight mt-0.5 block truncate max-w-sm">
                 {card.documentTitle || 'Spaced Practice'}
@@ -186,10 +186,10 @@ const ReviewSession = ({ initialCards, onFinished }) => {
         {/* Card Header */}
         <div className="flex items-center justify-between pb-4 border-b border-outline-variant/20">
           <span className="text-[11px] font-label font-bold tracking-widest text-primary uppercase">
-            Active Retrieval Unit
+            Flashcard
           </span>
           <span className="text-xs font-mono text-outline">
-            {flipped ? 'Card Back (Solution)' : 'Card Front (Query)'}
+            {flipped ? 'Answer' : 'Question'}
           </span>
         </div>
 
@@ -202,7 +202,7 @@ const ReviewSession = ({ initialCards, onFinished }) => {
           {flipped && (
             <div className="mt-8 pt-8 border-t border-outline-variant/30 animate-fade-in">
               <span className="text-[10px] font-label font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 block mb-2">
-                Conceptual Answer & Mental Anchor
+                Answer
               </span>
               <p className="font-body text-base sm:text-lg text-on-surface leading-relaxed">
                 {card.answer}
@@ -234,7 +234,7 @@ const ReviewSession = ({ initialCards, onFinished }) => {
       <section className="w-full flex flex-col gap-3">
         <div className="flex items-center justify-between px-2 text-xs font-label text-on-surface-variant">
           <span className="font-semibold uppercase tracking-wider text-[11px]">
-            Cognitive Recall Feedback (FSRS-4.5)
+            Rate Your Recall
           </span>
           <span className="text-outline text-[11px]">Press keys 1 · 2 · 3 · 4</span>
         </div>
@@ -297,10 +297,10 @@ const Review = () => {
           <Brain size={28} />
         </div>
         <h1 className="font-headline text-3xl sm:text-4xl font-normal text-on-surface tracking-tight">
-          Spaced Review Arena
+          Review Flashcards
         </h1>
         <p className="text-xs sm:text-sm text-on-surface-variant mt-1.5 leading-relaxed">
-          Algorithmic memory stabilization: grade your cognitive recall certainty and cards reschedule immediately prior to mathematical forget intervals.
+          Spaced repetition practice: rate how well you remembered each card to optimize your review schedule.
         </p>
         {data && (
           <p className="mt-2 text-xs font-label text-primary font-semibold">
@@ -331,7 +331,7 @@ const Review = () => {
             to="/flashcards"
             className="inline-block px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label text-xs font-semibold shadow-sm hover:bg-primary/95 transition-all"
           >
-            Open Flashcard Vault
+            Go to Flashcards
           </Link>
         </div>
       ) : (

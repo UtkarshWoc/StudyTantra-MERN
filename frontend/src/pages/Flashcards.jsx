@@ -3,17 +3,7 @@ import { Link } from 'react-router-dom';
 import FlashcardViewer from '../components/FlashcardViewer';
 import GenerationOptions from '../components/GenerationOptions';
 import DocumentStatus from '../components/DocumentStatus';
-import {
-  Layers,
-  Loader2,
-  Zap,
-  Trash2,
-  List,
-  Brain,
-  Download,
-  ArrowRight,
-  Sparkles,
-} from 'lucide-react';
+import { Layers, List, Brain, Download, Trash2, ArrowRight } from 'lucide-react';
 import {
   useDocuments,
   useFlashcards,
@@ -33,11 +23,11 @@ const toViewerCard = (card) => ({
 });
 
 const DeckList = ({ cards, onDelete }) => (
-  <ul className="divide-y divide-outline-variant/30 bg-surface-container-low rounded-2xl border border-outline-variant/30 shadow-xs font-body">
+  <ul className="divide-y divide-outline-variant/20 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs font-body">
     {cards.map((card) => (
       <li
         key={card._id}
-        className="flex items-start gap-4 p-5 hover:bg-surface-container transition-colors group"
+        className="flex items-start gap-4 p-5 hover:bg-surface-container-low transition-colors group"
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
@@ -52,7 +42,7 @@ const DeckList = ({ cards, onDelete }) => (
         </div>
         <button
           type="button"
-          onClick={() => window.confirm('Delete this flashcard from vault?') && onDelete(card._id)}
+          onClick={() => window.confirm('Delete this flashcard?') && onDelete(card._id)}
           aria-label="Delete flashcard"
           className="p-2 rounded-lg text-outline hover:text-error hover:bg-error-container/20 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
         >
@@ -94,135 +84,80 @@ const Flashcards = () => {
   if (loadingDocs) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-on-surface-variant gap-3">
-        <Loader2 className="animate-spin text-primary" size={36} />
-        <p className="font-headline text-base">Opening Flashcard Vault...</p>
+        <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+        <p className="font-label text-xs uppercase tracking-widest">Opening Flashcard Vault...</p>
       </div>
     );
   }
 
-  const totalCards = cards?.length || 0;
-
   return (
-    <div className="flex flex-col gap-8 pb-12 animate-fade-in font-body">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
-        <div className="flex flex-col gap-2 max-w-2xl">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-label font-bold tracking-widest uppercase text-primary bg-primary-fixed px-2.5 py-1 rounded-md">
-              Neural Spaced Repetition
+    <div className="py-6 space-y-8 max-w-5xl mx-auto font-body">
+      {/* Header Banner */}
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 md:p-8 shadow-[0_2px_16px_rgba(58,48,42,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="p-1 rounded-md bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[16px]">style</span>
             </span>
-            <span className="text-xs font-label text-on-surface-variant font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary" /> FSRS-4.5 Active Matrix
+            <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary">
+              Spaced Recall Vault
             </span>
           </div>
-          <h1 className="font-headline text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-on-surface leading-tight">
-            Flashcards Vault & Algorithmic Generator
+          <h1 className="font-headline text-3xl md:text-4xl font-bold text-on-surface tracking-tight">
+            Flashcards Vault
           </h1>
-          <p className="font-body text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-            FSRS-4.5 optimized deck repository with multi-modal cloze, concept pairing, and LaTeX formula testing.
+          <p className="font-body text-xs md:text-sm text-on-surface-variant mt-1">
+            Generate and practice active recall cards from documents, whole chapters, or specific topics.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        {selectedDocId && (
           <Link
-            to={selectedDocId ? `/review?document=${selectedDocId}` : '/review'}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-on-primary text-xs font-label font-bold shadow-sm transition-all"
+            to={`/review?document=${selectedDocId}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary text-xs font-label font-bold shadow-sm transition-all shrink-0"
           >
-            <span>Review Active Due Cards</span>
+            <span>Review Active Cards</span>
             <ArrowRight size={15} />
           </Link>
-        </div>
+        )}
       </div>
 
-      {/* Metric Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-surface-container-low shadow-sm border border-outline-variant/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">
-              Total Cards in Deck
-            </span>
-            <span className="material-symbols-outlined text-primary text-[20px]">inventory_2</span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="font-headline text-3xl font-bold text-on-surface">{totalCards}</span>
-            <span className="text-[11px] font-label text-primary font-bold">Active</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-surface-container-low shadow-sm border border-outline-variant/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">
-              Scheduled Today
-            </span>
-            <span className="material-symbols-outlined text-tertiary text-[20px]">schedule</span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="font-headline text-3xl font-bold text-tertiary">
-              {Math.min(totalCards, 18)}
-            </span>
-            <span className="text-[11px] font-label text-on-surface-variant">due reps</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-surface-container-low shadow-sm border border-outline-variant/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">
-              Target Stability
-            </span>
-            <span className="material-symbols-outlined text-secondary text-[20px]">network_intelligence</span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="font-headline text-3xl font-bold text-on-surface">90%</span>
-            <span className="text-[11px] font-label text-on-surface-variant">FSRS v4.5</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-surface-container-low shadow-sm border border-outline-variant/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">
-              Retention Score
-            </span>
-            <span className="material-symbols-outlined text-emerald-700 dark:text-emerald-400 text-[20px]">
-              verified
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="font-headline text-3xl font-bold text-primary">91.4%</span>
-            <span className="text-[11px] font-label text-primary font-bold">Optimal</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Deck Selector & AI Generation Panel */}
-      <div className="p-6 rounded-2xl bg-surface-container-low border border-outline-variant/30 shadow-sm space-y-5">
+      {/* Generation & Deck Selector Panel */}
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 md:p-8 shadow-[0_2px_16px_rgba(58,48,42,0.04)] space-y-6">
         {documents.length === 0 ? (
           <div className="text-center py-6">
-            <p className="text-xs text-on-surface-variant mb-3">No documents in library yet.</p>
-            <Link to="/documents" className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-semibold">
-              Upload a Document
+            <p className="text-xs text-on-surface-variant mb-3">No documents uploaded yet.</p>
+            <Link
+              to="/documents"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-label font-bold"
+            >
+              Upload Document First
             </Link>
           </div>
         ) : (
           <>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-outline-variant/30">
-              <div className="flex items-center gap-3">
-                <label htmlFor="flashcard-doc" className="text-xs font-label font-bold uppercase tracking-wider text-on-surface">
-                  Source Document:
-                </label>
-                <select
-                  id="flashcard-doc"
-                  value={selectedDocId}
-                  onChange={(e) => setPickedDocId(e.target.value)}
-                  className="bg-surface-container border border-outline-variant/40 text-on-surface px-3 py-1.5 rounded-xl font-label text-xs font-semibold cursor-pointer focus:outline-none focus:border-primary"
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label
+                  htmlFor="flashcard-doc"
+                  className="block text-xs font-label font-bold uppercase tracking-wider text-on-surface"
                 >
-                  {documents.map((doc) => (
-                    <option key={doc._id} value={doc._id}>
-                      {doc.title}
-                    </option>
-                  ))}
-                </select>
+                  Source Document
+                </label>
+                <DocumentStatus document={selectedDoc} />
               </div>
-              <DocumentStatus document={selectedDoc} />
+              <select
+                id="flashcard-doc"
+                value={selectedDocId}
+                onChange={(e) => setPickedDocId(e.target.value)}
+                className="w-full bg-surface-container-low border border-outline-variant/40 text-on-surface p-3 rounded-xl font-body text-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all"
+              >
+                {documents.map((doc) => (
+                  <option key={doc._id} value={doc._id}>
+                    {doc.title}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <GenerationOptions
@@ -232,58 +167,61 @@ const Flashcards = () => {
               pageCount={selectedDoc?.pageCount}
             />
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-outline-variant/30">
-              <label className="inline-flex items-center gap-2 text-xs font-label text-on-surface-variant cursor-pointer">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-outline-variant/20">
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-on-surface-variant cursor-pointer">
                 <input
                   type="checkbox"
                   checked={replace}
                   onChange={(e) => setReplace(e.target.checked)}
-                  className="accent-primary w-4 h-4 rounded cursor-pointer"
+                  className="accent-primary w-4 h-4 rounded"
                 />
-                Replace existing deck on generate
+                <span>Replace existing deck for this document</span>
               </label>
 
               <button
                 onClick={generateFlashcards}
                 disabled={generating || loadingCards || !ready}
-                className="px-6 py-2.5 rounded-xl bg-primary text-on-primary font-label text-xs font-semibold hover:bg-primary/95 shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label text-xs font-bold shadow-md hover:shadow-lg transition-all duration-150 transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                type="button"
               >
                 {generating ? (
                   <>
-                    <Loader2 className="animate-spin" size={15} />
-                    <span>Synthesizing Flashcards with AI...</span>
+                    <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                    <span>Generating Cards...</span>
                   </>
                 ) : (
                   <>
-                    <Zap size={15} />
-                    <span>{replace || !cards?.length ? 'Generate Flashcard Vault' : '+ Add Synthesized Cards'}</span>
+                    <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                    <span>{replace || !cards?.length ? 'Generate Deck' : 'Add More Cards'}</span>
                   </>
                 )}
               </button>
             </div>
           </>
         )}
-        {error && <p className="text-xs text-error font-medium p-2 rounded-lg bg-error-container">{error}</p>}
+
+        {error && <p className="text-xs text-error font-medium">{error}</p>}
       </div>
 
-      {/* Main Flashcard Practice / List Area */}
+      {/* Deck Viewer & Practice Section */}
       <div className="min-h-[400px]">
         {loadingCards ? (
-          <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant gap-2">
-            <Loader2 className="animate-spin text-primary" size={32} />
-            <p className="font-headline text-base">Loading flashcard units...</p>
+          <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant">
+            <span className="material-symbols-outlined text-3xl text-primary animate-spin mb-3">progress_activity</span>
+            <p className="text-xs font-label uppercase tracking-widest">Loading flashcard deck...</p>
           </div>
         ) : flashcards && flashcards.length > 0 ? (
           <div className="space-y-4">
-            {/* View Switcher and Exports */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Link
                   to={`/review?document=${selectedDocId}`}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-label font-semibold shadow-xs"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-label font-bold shadow-sm"
                 >
-                  <Brain size={14} /> FSRS Spaced Session
+                  <Brain size={15} />
+                  <span>Review Spaced Intervals</span>
                 </Link>
+
                 {[{ format: 'csv', label: 'CSV' }, { format: 'anki', label: 'Anki' }].map((x) => (
                   <button
                     key={x.format}
@@ -294,30 +232,33 @@ const Flashcards = () => {
                         `flashcards.${x.format === 'csv' ? 'csv' : 'txt'}`
                       ).catch(() => window.alert('Export failed. Please try again.'))
                     }
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container text-xs font-label font-semibold text-on-surface hover:bg-surface-container-high transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 text-xs font-label font-medium text-on-surface transition-colors cursor-pointer"
                   >
-                    <Download size={13} /> {x.label}
+                    <Download size={14} />
+                    <span>{x.label}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="flex items-center gap-1" role="tablist">
+              {/* View Switcher: Practice All vs All Cards */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-container-low border border-outline-variant/30" role="tablist">
                 {[
-                  { id: 'study', label: 'Interactive Practice', icon: Layers },
-                  { id: 'list', label: `Deck List (${cards.length})`, icon: List },
+                  { id: 'study', label: 'Practice Deck', icon: Layers },
+                  { id: 'list', label: `All Cards (${cards.length})`, icon: List },
                 ].map((t) => (
                   <button
                     key={t.id}
                     role="tab"
                     aria-selected={view === t.id}
                     onClick={() => setView(t.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-label font-semibold cursor-pointer transition-all ${
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-label font-bold transition-all cursor-pointer ${
                       view === t.id
                         ? 'bg-primary text-on-primary shadow-xs'
-                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                        : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
-                    <t.icon size={14} /> {t.label}
+                    <t.icon size={14} />
+                    <span>{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -334,13 +275,15 @@ const Flashcards = () => {
             )}
           </div>
         ) : selectedDocId && !generating && flashcards !== null ? (
-          <div className="p-10 rounded-2xl bg-surface-container-low text-center flex flex-col items-center justify-center border border-outline-variant/30">
-            <span className="material-symbols-outlined text-4xl text-outline mb-2">style</span>
-            <h3 className="font-headline text-2xl font-bold text-on-surface mb-1">No flashcards generated yet</h3>
-            <p className="text-xs text-on-surface-variant max-w-sm mb-4 leading-relaxed">
+          <div className="text-center py-20 bg-surface-container-lowest border border-dashed border-outline-variant/40 rounded-3xl p-8">
+            <div className="w-16 h-16 rounded-2xl bg-primary-fixed text-primary mx-auto flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-3xl">style</span>
+            </div>
+            <h3 className="font-headline text-2xl font-bold text-on-surface mb-2">No Flashcards Generated Yet</h3>
+            <p className="text-xs text-on-surface-variant max-w-sm mx-auto mb-6">
               {ready
-                ? 'Select your options above and click "Generate Flashcard Vault" to infer active recall pairs.'
-                : 'This document is still being analyzed. You can generate flashcards once ingestion is complete.'}
+                ? 'Select generation options above to synthesize cards from this document.'
+                : 'This document is still processing. Flashcards will become available once ready.'}
             </p>
           </div>
         ) : null}

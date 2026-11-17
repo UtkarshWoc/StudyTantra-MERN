@@ -23,7 +23,7 @@ const CollectionQuizzes = ({ collectionId, ready }) => {
             <span className="material-symbols-outlined text-[20px]">bolt</span>
           </span>
           <div>
-            <h3 className="font-headline text-lg font-bold text-on-surface">Synthesize Collection Quiz</h3>
+            <h3 className="font-headline text-lg font-bold text-on-surface">Generate Collection Quiz</h3>
             <p className="text-xs text-on-surface-variant">Generate cross-cutting questions spanning all linked documents in this collection.</p>
           </div>
         </div>
@@ -99,7 +99,7 @@ const CollectionDetail = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant">
         <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-3">progress_activity</span>
-        <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">Opening Course Collection...</p>
+        <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">Loading Collection...</p>
       </div>
     );
   }
@@ -147,11 +147,11 @@ const CollectionDetail = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-label font-bold uppercase tracking-widest text-primary">
-                  Course Workspace
+                  Collection
                 </span>
                 <span className="text-xs text-outline">•</span>
                 <span className="text-xs font-label text-on-surface-variant">
-                  {collection.documents.length} Source {collection.documents.length === 1 ? 'Doc' : 'Docs'}
+                  {collection.documents.length} {collection.documents.length === 1 ? 'Document' : 'Documents'}
                 </span>
               </div>
               <h1 className="font-headline text-2xl md:text-3xl font-bold text-on-surface mt-0.5">
@@ -163,19 +163,19 @@ const CollectionDetail = () => {
           <div className="flex items-center gap-2">
             <span className="px-3 py-1.5 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-label font-semibold text-on-surface flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-primary" />
-              <span>{readyCount} Synthesized</span>
+              <span>{readyCount} Ready</span>
             </span>
           </div>
         </div>
 
         <p className="font-body text-sm text-on-surface-variant mt-2 max-w-2xl">
-          Multi-document synthesis canvas. Query across all course texts simultaneously with Tantra AI Copilot or generate comprehensive review assessments.
+          Multi-document study workspace. Chat across all documents simultaneously or generate practice quizzes.
         </p>
 
         {/* Linked Documents Pills */}
         <div className="mt-5 pt-4 border-t border-outline-variant/20">
           <span className="text-xs font-label font-bold uppercase tracking-wider text-on-surface-variant block mb-2.5">
-            Primary Curriculum Sources:
+            Documents in Collection:
           </span>
           {collection.documents.length === 0 ? (
             <p className="text-xs text-on-surface-variant italic">
@@ -214,7 +214,7 @@ const CollectionDetail = () => {
           type="button"
         >
           <span className="material-symbols-outlined text-[18px]">forum</span>
-          <span>Tantra AI Copilot</span>
+          <span>AI Assistant</span>
         </button>
 
         <button
@@ -229,7 +229,7 @@ const CollectionDetail = () => {
           type="button"
         >
           <span className="material-symbols-outlined text-[18px]">bolt</span>
-          <span>Collection Assessments</span>
+          <span>Quizzes</span>
         </button>
       </div>
 

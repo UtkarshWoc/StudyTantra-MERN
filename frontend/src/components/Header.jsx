@@ -4,16 +4,16 @@ import { useAuth } from '../context/auth';
 import { useTheme } from '../context/theme';
 
 const titles = [
-  ['/dashboard', 'Student Dashboard'],
-  ['/review', 'Spaced Review Session'],
-  ['/planner', 'Semester Exam Planner'],
-  ['/collections', 'Collection Workspace'],
-  ['/documents', 'Document Intelligence Library'],
-  ['/flashcards', 'Flashcards Vault'],
-  ['/quizzes', 'Interactive Quiz Engine'],
-  ['/favorites', 'Curated Favorites'],
-  ['/profile', 'Academic Profile'],
-  ['/settings', 'Settings & Preferences'],
+  ['/dashboard', 'Dashboard'],
+  ['/review', 'Spaced Review'],
+  ['/planner', 'Exam Planner'],
+  ['/collections', 'Collection'],
+  ['/documents', 'Library'],
+  ['/flashcards', 'Flashcards'],
+  ['/quizzes', 'Quizzes'],
+  ['/favorites', 'Favorites'],
+  ['/profile', 'Profile'],
+  ['/settings', 'Settings'],
 ];
 
 const Header = ({ onToggleMobileSidebar }) => {
@@ -54,8 +54,12 @@ const Header = ({ onToggleMobileSidebar }) => {
           </button>
         )}
 
+        <h1 className="font-headline text-lg font-bold text-on-surface shrink-0 hidden sm:block">
+          {title}
+        </h1>
+
         {/* Global Search Input */}
-        <form onSubmit={handleSearch} role="search" className="w-full relative">
+        <form onSubmit={handleSearch} role="search" className="w-full relative hidden md:block">
           <span
             className={`material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] transition-colors pointer-events-none ${
               focused ? 'text-primary' : 'text-outline'
@@ -73,25 +77,16 @@ const Header = ({ onToggleMobileSidebar }) => {
             className={`w-full pl-10 pr-12 py-2 rounded-xl text-xs font-body text-on-surface placeholder:text-outline bg-surface-container-low border border-transparent focus:outline-none focus:border-primary/40 focus:bg-surface-container-lowest transition-all ${
               focused ? 'shadow-[0_2px_12px_rgba(194,101,42,0.08)]' : ''
             }`}
-            placeholder="Search concepts, citations, flashcards, textbooks..."
+            placeholder="Search documents..."
           />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-label font-semibold text-outline bg-surface-container-high/60">
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-label font-semibold text-outline bg-surface-container-high/60">
             ⌘K
           </kbd>
         </form>
       </div>
 
-      {/* Right Controls: Active Deck, Theme, Notifications, Avatar */}
-      <div className="flex items-center gap-3.5 shrink-0 ml-4">
-        {/* Active Deck Pill */}
-        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high/80 border border-outline-variant/40 text-xs text-on-surface-variant font-label">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-          <span className="text-[11px] text-on-surface-variant font-medium">Active Deck:</span>
-          <span className="font-semibold text-primary text-[11px] max-w-[140px] truncate">
-            Cognitive Science
-          </span>
-        </div>
-
+      {/* Right Controls: Theme Toggle & User Avatar */}
+      <div className="flex items-center gap-3 shrink-0 ml-4">
         {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
@@ -104,15 +99,6 @@ const Header = ({ onToggleMobileSidebar }) => {
           </span>
         </button>
 
-        {/* Notifications Icon with Badge */}
-        <button
-          aria-label="Notifications"
-          className="relative p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[20px]">notifications</span>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-tertiary"></span>
-        </button>
-
         {/* User Profile Avatar Pill */}
         <button
           onClick={() => navigate('/profile')}
@@ -120,14 +106,14 @@ const Header = ({ onToggleMobileSidebar }) => {
           aria-label="Profile"
         >
           <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-on-primary text-xs font-bold shadow-sm ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all">
-            {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div className="text-right hidden sm:block leading-tight pr-1">
             <p className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors">
-              {user?.name || 'Arya Sharma'}
+              {user?.name || 'User'}
             </p>
-            <p className="text-[10px] text-on-surface-variant font-label">
-              Scholar
+            <p className="text-[10px] text-on-surface-variant font-label truncate max-w-[120px]">
+              {user?.email || 'Account'}
             </p>
           </div>
         </button>

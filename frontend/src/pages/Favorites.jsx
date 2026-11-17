@@ -33,14 +33,14 @@ const Favorites = () => {
               <span className="material-symbols-outlined text-[18px]">star</span>
             </span>
             <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary">
-              Bookmarked Materials
+              Saved Documents
             </span>
           </div>
           <h1 className="font-headline text-3xl md:text-5xl font-bold text-on-surface tracking-tight">
-            Curated Favorites
+            Favorites
           </h1>
           <p className="font-body text-sm text-on-surface-variant max-w-2xl mt-1.5">
-            Quick-access shelf for essential syllabus textbooks, lecture slides, and high-priority revision sets.
+            Quick-access list for your bookmarked documents and study materials.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ const Favorites = () => {
           </span>
           <input
             type="text"
-            placeholder="Search bookmarked sources..."
+            placeholder="Search favorites..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all"
@@ -90,11 +90,11 @@ const Favorites = () => {
           <div className="w-16 h-16 rounded-2xl bg-primary-fixed text-primary mx-auto flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-3xl">star_border</span>
           </div>
-          <h3 className="font-headline text-2xl font-bold text-on-surface mb-2">No Bookmarked Sources Found</h3>
+          <h3 className="font-headline text-2xl font-bold text-on-surface mb-2">No Favorites Yet</h3>
           <p className="text-sm text-on-surface-variant max-w-sm mx-auto mb-6">
             {searchQuery
               ? `No favorites matching "${searchQuery}".`
-              : 'Save high-priority textbooks and lecture slides in your Document Library to surface them here for rapid review.'}
+              : 'Star important documents in your Library to quickly access them here.'}
           </p>
           {searchQuery && (
             <button

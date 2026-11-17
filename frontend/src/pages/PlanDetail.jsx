@@ -28,7 +28,7 @@ const PlanDetail = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant">
         <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-3">progress_activity</span>
-        <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">Loading Syllabus Cadence...</p>
+        <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">Loading Study Plan...</p>
       </div>
     );
   }
@@ -62,7 +62,7 @@ const PlanDetail = () => {
         className="inline-flex items-center gap-1.5 text-xs font-label font-bold uppercase tracking-wider text-on-surface-variant hover:text-primary transition-colors"
       >
         <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-        <span>All Exam Plans</span>
+        <span>All Study Plans</span>
       </Link>
 
       {/* Plan Header Bento Card */}
@@ -74,7 +74,7 @@ const PlanDetail = () => {
             </span>
             <div>
               <span className="text-[10px] font-label font-bold uppercase tracking-widest text-primary">
-                Curriculum Milestone Track
+                Study Plan
               </span>
               <h1 className="font-headline text-2xl md:text-3xl font-bold text-on-surface leading-tight mt-0.5">
                 {plan.title}
@@ -89,7 +89,7 @@ const PlanDetail = () => {
         </div>
 
         <p className="text-xs md:text-sm text-on-surface-variant mt-2 font-medium">
-          Exam on {formatDate(plan.examDate)} · Syllabus Texts:{' '}
+          Target Date: {formatDate(plan.examDate)} · Documents:{' '}
           <span className="text-on-surface font-semibold">
             {plan.documents.map((d) => d?.title).filter(Boolean).join(', ') || 'No attached documents'}
           </span>
@@ -98,7 +98,7 @@ const PlanDetail = () => {
         {/* Progress Bar */}
         <div className="mt-5 pt-4 border-t border-outline-variant/20">
           <div className="flex items-center justify-between text-xs font-label mb-2">
-            <span className="font-bold uppercase tracking-wider text-on-surface-variant">Curriculum Absorption</span>
+            <span className="font-bold uppercase tracking-wider text-on-surface-variant">Progress</span>
             <span className="font-semibold text-primary">
               {done} of {tasks.length} tasks complete ({pct}%)
             </span>
@@ -126,8 +126,8 @@ const PlanDetail = () => {
       {/* Days Schedule Timeline */}
       <div className="space-y-4">
         <div className="flex items-center justify-between pb-1">
-          <h2 className="font-headline text-xl font-bold text-on-surface">Daily Breakdown &amp; Checkpoints</h2>
-          <span className="text-xs font-label text-on-surface-variant">{plan.days.length} Calendar Days</span>
+          <h2 className="font-headline text-xl font-bold text-on-surface">Daily Schedule</h2>
+          <span className="text-xs font-label text-on-surface-variant">{plan.days.length} Days</span>
         </div>
 
         <ol className="space-y-3.5">
@@ -166,7 +166,7 @@ const PlanDetail = () => {
                 </div>
 
                 {day.tasks.length === 0 ? (
-                  <p className="text-xs text-on-surface-variant italic py-1">Rest and memory stabilization day.</p>
+                  <p className="text-xs text-on-surface-variant italic py-1">Rest day — no tasks scheduled.</p>
                 ) : (
                   <ul className="space-y-2.5">
                     {day.tasks.map((task) => {

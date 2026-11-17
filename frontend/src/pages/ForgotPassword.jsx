@@ -23,7 +23,7 @@ const ForgotPassword = () => {
   return (
     <AuthCard
       title="Reset Your Password"
-      subtitle="We'll send an authentication recovery link to your institutional email."
+      subtitle="We'll send a password reset link to your email address."
       footer={
         <Link to="/login" className="font-semibold text-primary hover:underline font-label text-xs">
           ← Return to Sign In
@@ -58,7 +58,7 @@ const ForgotPassword = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={authInputClass}
-                placeholder="arya.sharma@university.edu"
+                placeholder="name@example.com"
               />
             </div>
           </div>

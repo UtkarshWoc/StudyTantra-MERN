@@ -39,7 +39,7 @@ const DeleteAccount = () => {
             <h3 className="font-headline text-xl font-bold text-tertiary">Danger Zone: Terminate Account</h3>
           </div>
           <p className="text-xs text-on-surface-variant max-w-xl leading-relaxed">
-            Permanently erases your scholar profile, synthesized flashcards, quiz attempts, and uploaded PDF course texts. This action cannot be reversed.
+            Permanently erases your profile, flashcards, quiz attempts, study plans, and uploaded documents. This action cannot be reversed.
           </p>
         </div>
 
@@ -127,7 +127,7 @@ const EmailStatus = () => {
     return (
       <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-label font-semibold text-emerald-700 dark:text-emerald-300">
         <span className="material-symbols-outlined text-[16px]">verified</span>
-        <span>Verified Academic Account</span>
+        <span>Verified Account</span>
       </p>
     );
   }
@@ -188,14 +188,14 @@ const Profile = () => {
             <span className="material-symbols-outlined text-[18px]">person</span>
           </span>
           <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary">
-            Academic Identity
+            Account Details
           </span>
         </div>
         <h1 className="font-headline text-3xl md:text-5xl font-bold text-on-surface tracking-tight">
-          Scholar Profile
+          Profile
         </h1>
         <p className="font-body text-sm text-on-surface-variant max-w-2xl mt-1.5">
-          Manage your personal academic identity, linked institutional email address, and account safety.
+          Manage your personal details, email address, and account security.
         </p>
       </div>
 
@@ -206,10 +206,7 @@ const Profile = () => {
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="font-headline text-2xl font-bold text-on-surface">{user?.name || 'Scholar'}</h2>
-            <span className="px-2 py-0.5 rounded-md bg-primary-fixed text-on-primary-fixed text-[10px] font-label font-bold uppercase tracking-wider">
-              Level 4 Scholar
-            </span>
+            <h2 className="font-headline text-2xl font-bold text-on-surface">{user?.name || 'User'}</h2>
           </div>
           <p className="text-xs font-label text-on-surface-variant mt-0.5">{user?.email || ''}</p>
           <EmailStatus />
@@ -221,7 +218,7 @@ const Profile = () => {
         <div className="p-6 md:p-8 border-b border-outline-variant/20">
           <h3 className="font-headline text-xl font-bold text-on-surface">Personal Information</h3>
           <p className="text-xs text-on-surface-variant mt-1">
-            Update your display name and academic communication address.
+            Update your display name and email address.
           </p>
         </div>
 

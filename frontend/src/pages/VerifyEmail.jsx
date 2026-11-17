@@ -32,13 +32,13 @@ const VerifyEmail = () => {
         {state.status === 'loading' && (
           <>
             <Loader2 className="mx-auto animate-spin text-primary" size={40} />
-            <p className="text-xs">Verifying institutional email...</p>
+            <p className="text-xs">Verifying email address...</p>
           </>
         )}
         {state.status === 'done' && (
           <>
             <CheckCircle2 className="mx-auto text-emerald-600" size={40} />
-            <p className="text-xs font-semibold text-on-surface">Your academic email has been verified.</p>
+            <p className="text-xs font-semibold text-on-surface">Your email address has been verified.</p>
           </>
         )}
         {state.status === 'error' && (
@@ -49,7 +49,7 @@ const VerifyEmail = () => {
         )}
         {state.status !== 'loading' && (
           <Link to={user ? '/dashboard' : '/login'} className={authButtonClass}>
-            {user ? 'Enter Learning Vault' : 'Sign In'}
+            {user ? 'Go to Dashboard' : 'Sign In'}
           </Link>
         )}
       </div>

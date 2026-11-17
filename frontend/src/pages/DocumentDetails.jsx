@@ -76,10 +76,10 @@ const SummaryPanel = ({ document, onCitation }) => {
       ) : (
         <div className="p-6 text-center text-on-surface-variant text-xs">
           <span className="material-symbols-outlined text-3xl text-outline mb-2">menu_book</span>
-          <p className="font-headline text-base text-on-surface font-semibold mb-1">No summary synthesized yet</p>
+          <p className="font-headline text-base text-on-surface font-semibold mb-1">No summary yet</p>
           <p className="max-w-xs mx-auto leading-relaxed">
             {ready
-              ? 'Click "Generate Summary" to extract core theorems, proof summaries, and key conceptual definitions.'
+              ? 'Click "Generate Summary" to generate an overview of this document.'
               : 'Available once document processing completes.'}
           </p>
         </div>
@@ -134,7 +134,7 @@ const DocumentDetails = () => {
     return (
       <div className="flex flex-col items-center justify-center h-full text-on-surface-variant py-24 gap-3">
         <Loader2 className="animate-spin text-primary" size={36} />
-        <p className="font-headline text-base">Opening intelligence workspace...</p>
+        <p className="font-headline text-base">Loading document...</p>
       </div>
     );
   }
@@ -144,7 +144,7 @@ const DocumentDetails = () => {
         <FileText size={48} className="mx-auto mb-3 text-outline" />
         <h2 className="font-headline text-2xl font-bold text-on-surface mb-2">Document not found</h2>
         <p className="text-xs text-on-surface-variant mb-6">
-          The requested document could not be retrieved from your academic library.
+          The requested document could not be found.
         </p>
         <Link to="/documents" className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-semibold">
           ← Back to Library
@@ -155,7 +155,7 @@ const DocumentDetails = () => {
 
   const tabs = [
     { id: 'pdf', label: 'Document', icon: FileText, mobileOnly: true },
-    { id: 'chat', label: 'Tantra Copilot', icon: MessageSquare },
+    { id: 'chat', label: 'AI Chat', icon: MessageSquare },
     { id: 'summary', label: 'Summary', icon: ScrollText },
   ];
 
@@ -285,7 +285,7 @@ const DocumentDetails = () => {
               {panel.kind === 'flashcard' &&
                 (makeFlashcard.isPending ? (
                   <p className="flex items-center gap-2 text-xs text-on-surface-variant">
-                    <Loader2 className="animate-spin text-primary" size={16} /> Synthesizing flashcard from passage...
+                    <Loader2 className="animate-spin text-primary" size={16} /> Creating flashcard...
                   </p>
                 ) : makeFlashcard.isError ? (
                   <p className="text-xs text-error pr-6">{getErrorMessage(makeFlashcard.error)}</p>
@@ -293,12 +293,12 @@ const DocumentDetails = () => {
                   makeFlashcard.data && (
                     <div className="pr-6">
                       <p className="flex items-center gap-1.5 text-[11px] font-label font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2">
-                        <CheckCircle2 size={14} /> Flashcard Synthesized & Added
+                        <CheckCircle2 size={14} /> Flashcard Created
                       </p>
                       <p className="text-xs font-bold text-on-surface">{makeFlashcard.data.question}</p>
                       <p className="text-xs text-on-surface-variant mt-1">{makeFlashcard.data.answer}</p>
                       <Link to="/flashcards" className="inline-block mt-2.5 text-xs font-semibold text-primary hover:underline">
-                        Open in Flashcard Vault →
+                        View Flashcards →
                       </Link>
                     </div>
                   )
