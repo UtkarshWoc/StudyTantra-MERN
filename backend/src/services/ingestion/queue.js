@@ -19,12 +19,12 @@ const settleIdle = () => {
 
 const pump = () => {
   while (running < CONCURRENCY && pending.length) {
-    const id = pending.shift();
+    const item = pending.shift();
     running += 1;
-    ingestDocument(id)
+    ingestDocument(item.id, item.buffer)
       .catch((err) => logger.error({ err }, 'Ingestion job crashed'))
       .finally(() => {
-        queued.delete(id);
+        queued.delete(item.id);
         running -= 1;
         pump();
         settleIdle();
@@ -32,11 +32,11 @@ const pump = () => {
   }
 };
 
-export const enqueueIngestion = (documentId) => {
+export const enqueueIngestion = (documentId, initialBuffer = null) => {
   const id = String(documentId);
   if (queued.has(id)) return;
   queued.add(id);
-  pending.push(id);
+  pending.push({ id, buffer: initialBuffer });
   pump();
 };
 
@@ -50,9 +50,26 @@ export const whenIdle = () =>
 /**
  * On boot: pick up documents interrupted mid-processing and index documents
  * uploaded before ingestion existed (no status yet).
+ * Cleans up stale abandoned processing documents so they don't block the queue.
  */
 export const resumePendingIngestion = async () => {
-  const docs = await Document.find({ $or: [{ status: 'processing' }, { status: { $exists: false } }] }).select('_id');
-  if (docs.length) logger.info({ count: docs.length }, 'Queueing documents for ingestion');
+  const staleCutoff = new Date(Date.now() - 20 * 60 * 1000);
+  try {
+    // Mark ancient unfinished documents as failed so they don't loop endlessly
+    await Document.updateMany(
+      { status: 'processing', updatedAt: { $lt: staleCutoff } },
+      {
+        status: 'failed',
+        processingError: 'Processing timed out. Please use the Retry button to reprocess.',
+      }
+    );
+  } catch (err) {
+    logger.warn({ err: err.message }, 'Could not clean up stale documents');
+  }
+
+  const docs = await Document.find({
+    $or: [{ status: 'processing', updatedAt: { $gte: staleCutoff } }, { status: { $exists: false } }],
+  }).select('_id');
+  if (docs.length) logger.info({ count: docs.length }, 'Queueing recent documents for ingestion');
   docs.forEach((d) => enqueueIngestion(d._id));
 };

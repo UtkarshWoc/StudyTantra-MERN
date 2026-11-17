@@ -27,19 +27,37 @@ const withRetry = async (fn, { retries = 2, baseMs = 800 } = {}) => {
   }
 };
 
-// Embedding a whole book sends hundreds of texts in a row and trips per-minute
-// quotas (free tier counts every text). A 429 clears within the minute, so wait
-// it out instead of failing the document.
-const QUOTA_WAIT_MS = 62_000;
-const MAX_QUOTA_WAITS = 8;
+// Extract retry delay from Gemini rate-limit (429) errors, or use a reasonable fallback.
+const parseRetryDelayMs = (err) => {
+  try {
+    const msg = typeof err?.message === 'string' ? err.message : '';
+    const match = msg.match(/retry in ([\d\.]+)s/i);
+    if (match) return Math.min(45_000, Math.ceil(parseFloat(match[1]) * 1000) + 1000);
+
+    const details = err?.details;
+    if (Array.isArray(details)) {
+      for (const d of details) {
+        if (d?.retryDelay) {
+          const s = parseInt(d.retryDelay, 10);
+          if (!isNaN(s) && s > 0) return Math.min(45_000, s * 1000 + 1000);
+        }
+      }
+    }
+  } catch {}
+  return 10_000; // 10s default backoff instead of stalling for over a minute
+};
+
+const MAX_QUOTA_WAITS = 4;
 const withQuotaWait = async (fn) => {
   for (let waited = 0; ; waited++) {
     try {
       return await fn();
     } catch (err) {
-      if ((err?.status ?? err?.code) !== 429 || waited >= MAX_QUOTA_WAITS) throw err;
-      logger.warn({ waited }, 'Gemini quota reached, waiting for the rate-limit window to reset');
-      await new Promise((r) => setTimeout(r, QUOTA_WAIT_MS));
+      const status = err?.status ?? err?.code;
+      if (status !== 429 || waited >= MAX_QUOTA_WAITS) throw err;
+      const waitMs = parseRetryDelayMs(err);
+      logger.warn({ waited, waitMs }, 'Gemini rate quota reached; waiting before retry');
+      await new Promise((r) => setTimeout(r, waitMs));
     }
   }
 };
@@ -96,9 +114,11 @@ export const geminiProvider = {
 
   async embed(texts, { taskType = 'RETRIEVAL_DOCUMENT', dimensions = 768 } = {}) {
     const vectors = [];
-    // The API accepts batches; keep them modest to stay under request limits.
-    for (let i = 0; i < texts.length; i += 50) {
-      const batch = texts.slice(i, i + 50);
+    // Batches of 10 chunks stay safely under the free tier limit of 30,000 tokens/minute.
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 200)); // Brief stagger to prevent burst limits
+      const batch = texts.slice(i, i + BATCH_SIZE);
       const res = await withQuotaWait(() => withRetry(() => getClient().models.embedContent({
         model: env.GEMINI_EMBED_MODEL,
         contents: batch,

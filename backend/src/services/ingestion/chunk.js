@@ -1,8 +1,8 @@
 // Split page texts into overlapping, page-tagged chunks for embedding/retrieval.
-// ~3200 chars ≈ 800 tokens; overlap keeps sentences that straddle a boundary
-// retrievable from either side.
+// ~3600 chars ≈ 900 tokens; overlap keeps sentences that straddle a boundary
+// retrievable from either side while keeping chunk volume efficient.
 
-const DEFAULTS = { maxChars: 3200, overlapChars: 400 };
+const DEFAULTS = { maxChars: 3600, overlapChars: 300 };
 
 const splitSentences = (text) => text.match(/[^.!?\n]+(?:[.!?]+|\n+|$)/g)?.map((s) => s.trim()).filter(Boolean) || [];
 

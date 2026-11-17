@@ -46,7 +46,8 @@ export const uploadDocument = async (req, res) => {
   });
 
   // Text extraction, OCR and embeddings run in the background; the client polls status.
-  enqueueIngestion(document._id);
+  // Pass the in-memory buffer directly to skip re-downloading from storage.
+  enqueueIngestion(document._id, req.file.buffer);
   await recordActivity(req.user._id, 'upload', { document: document._id });
   res.status(201).json(document);
 };
