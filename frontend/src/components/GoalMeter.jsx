@@ -8,13 +8,18 @@ const GoalMeter = ({ done = 0, target = 20 }) => {
   return (
     <div>
       <div className="flex items-baseline justify-between mb-2">
-        <p className="text-2xl font-extrabold text-white">
-          {done}<span className="text-base font-semibold text-slate-400"> / {target}</span>
+        <p className="font-headline text-3xl font-bold text-on-surface">
+          {done}
+          <span className="text-base font-normal text-on-surface-variant"> / {target}</span>
         </p>
         {complete ? (
-          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400"><CheckCircle2 size={14} /> Goal reached</span>
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 font-label">
+            <CheckCircle2 size={14} /> Goal reached
+          </span>
         ) : (
-          <span className="text-xs font-semibold text-slate-500">{target - done} to go</span>
+          <span className="text-xs font-semibold text-on-surface-variant font-label">
+            {target - done} to go
+          </span>
         )}
       </div>
       <div
@@ -23,11 +28,15 @@ const GoalMeter = ({ done = 0, target = 20 }) => {
         aria-valuemax={target}
         aria-valuenow={Math.min(done, target)}
         aria-label="Cards reviewed today"
-        className={`h-2.5 rounded-full overflow-hidden ${complete ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}
+        className={`h-2.5 rounded-full overflow-hidden ${
+          complete ? 'bg-emerald-500/20' : 'bg-surface-container-highest'
+        }`}
       >
         <div
-          className={`h-full rounded-full transition-all duration-1000 ease-out ${complete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' : 'bg-gradient-to-r from-amber-500 to-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]'}`}
-          style={{ width: `${pct}%`, animation: 'progress-fill 1s ease-out' }}
+          className={`h-full rounded-full transition-all duration-700 ease-out ${
+            complete ? 'bg-emerald-600' : 'bg-primary'
+          }`}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>

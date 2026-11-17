@@ -1,15 +1,17 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 
-// Sequential golden-amber palette calibrated for dark surfaces (#111827 / #0b1120).
-// Lightness rises with activity; level 1 (#d97706) provides clear contrast against EMPTY (#1e293b).
+// Sequential Sahara-amber ramp.
+// '#1e293b' retained for zero-activity cells to preserve accessible test assertions and contrast.
 const EMPTY = '#1e293b';
-const RAMP = ['#d97706', '#f59e0b', '#fbbf24', '#fef08a'];
+const RAMP = ['#c2652a', '#e08850', '#f0a878', '#fbe8d8'];
 const BUCKETS = [1, 5, 15, 30]; // lower bounds for RAMP steps
 
 const colorFor = (count) => {
   if (!count) return EMPTY;
   let step = 0;
-  BUCKETS.forEach((min, i) => { if (count >= min) step = i; });
+  BUCKETS.forEach((min, i) => {
+    if (count >= min) step = i;
+  });
   return RAMP[step];
 };
 
@@ -18,17 +20,22 @@ const GAP = 2; // surface gap between cells
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const formatDay = (key) =>
-  new Date(`${key}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  new Date(`${key}T00:00:00Z`).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 /**
- * GitHub-style calendar of study activity.
+ * GitHub-style calendar of study activity in Sahara styling.
  * days: [{ date: 'YYYY-MM-DD', count }] oldest → newest.
  */
 const ActivityHeatmap = ({ days = [] }) => {
   const [hover, setHover] = useState(null); // { day, x, y }
 
   const { weeks, monthLabels, total, activeDays } = useMemo(() => {
-    // Fallback if days is empty: generate 365 days of empty slots so the grid is never 0 width
     let effectiveDays = days;
     if (!effectiveDays || effectiveDays.length === 0) {
       const today = new Date();
@@ -39,19 +46,16 @@ const ActivityHeatmap = ({ days = [] }) => {
       });
     }
 
-    // Pad the start so each column is a Sunday→Saturday week
     const firstDow = effectiveDays.length ? new Date(`${effectiveDays[0].date}T00:00:00Z`).getUTCDay() : 0;
     const cells = [...Array(firstDow).fill(null), ...effectiveDays];
     const cols = [];
     for (let i = 0; i < cells.length; i += 7) cols.push(cells.slice(i, i + 7));
 
-    // Label a column when a month starts in it (and the first column)
     const labels = [];
     cols.forEach((week, i) => {
       const ref = week.find((d) => d?.date.endsWith('-01')) || (i === 0 ? week.find(Boolean) : null);
       if (ref) labels.push({ col: i, label: MONTHS[Number(ref.date.slice(5, 7)) - 1] });
     });
-    // Drop a first label that would collide with the next one
     if (labels.length > 1 && labels[1].col - labels[0].col < 3) labels.shift();
 
     return {
@@ -74,60 +78,69 @@ const ActivityHeatmap = ({ days = [] }) => {
 
   return (
     <figure className="relative">
-      <div ref={scrollRef} className="overflow-x-auto pb-1">
+      <div ref={scrollRef} className="overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
         <svg
           width={width}
           height={height}
           role="img"
           aria-label={`Study activity over the last year: ${total} reviews and quizzes on ${activeDays} days`}
           onMouseLeave={() => setHover(null)}
+          className="select-none"
         >
           {monthLabels.map((m) => (
-            <text key={`${m.col}-${m.label}`} x={m.col * (CELL + GAP)} y={10} className="fill-slate-500" fontSize="10">{m.label}</text>
-          ))}
-          {weeks.map((week, col) => week.map((day, row) => day && (
-            <rect
-              key={day.date}
-              x={col * (CELL + GAP)}
-              y={16 + row * (CELL + GAP)}
-              width={CELL}
-              height={CELL}
-              rx={2}
-              fill={colorFor(day.count)}
-              stroke={day.count ? 'none' : 'rgba(255, 255, 255, 0.05)'}
-              strokeWidth={day.count ? 0 : 0.5}
-              className="transition-colors duration-150"
-              onMouseEnter={(e) => {
-                const box = e.currentTarget.ownerSVGElement.getBoundingClientRect();
-                const r = e.currentTarget.getBoundingClientRect();
-                setHover({ day, x: r.left - box.left + CELL / 2, y: r.top - box.top });
-              }}
+            <text
+              key={`${m.col}-${m.label}`}
+              x={m.col * (CELL + GAP)}
+              y={10}
+              className="fill-on-surface-variant font-label text-[10px]"
+              fontSize="10"
             >
-              <title>{`${day.count} on ${formatDay(day.date)}`}</title>
-            </rect>
-          )))}
+              {m.label}
+            </text>
+          ))}
+          {weeks.map((week, col) =>
+            week.map(
+              (day, row) =>
+                day && (
+                  <rect
+                    key={day.date}
+                    x={col * (CELL + GAP)}
+                    y={16 + row * (CELL + GAP)}
+                    width={CELL}
+                    height={CELL}
+                    rx={2.5}
+                    fill={colorFor(day.count)}
+                    stroke={day.count ? 'none' : 'rgba(154, 144, 136, 0.2)'}
+                    strokeWidth={day.count ? 0 : 0.5}
+                    className="transition-colors duration-150 cursor-pointer"
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const parent = scrollRef.current.getBoundingClientRect();
+                      setHover({
+                        day,
+                        x: rect.left - parent.left + CELL / 2,
+                        y: rect.top - parent.top - 8,
+                      });
+                    }}
+                  />
+                )
+            )
+          )}
         </svg>
       </div>
 
       {hover && (
         <div
           role="tooltip"
-          style={{ left: hover.x, top: hover.y - 8 }}
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-[#0b1120] border border-[#334155] px-2.5 py-1.5 text-xs shadow-xl z-20"
+          className="absolute z-10 pointer-events-none -translate-x-1/2 -translate-y-full px-2.5 py-1 rounded-lg bg-surface-container-highest text-on-surface text-[11px] font-label font-medium shadow-md whitespace-nowrap border border-outline-variant/30"
+          style={{ left: hover.x, top: hover.y }}
         >
-          <span className="font-semibold text-slate-100">{hover.day.count} {hover.day.count === 1 ? 'activity' : 'activities'}</span>
-          <span className="text-slate-400"> · {formatDay(hover.day.date)}</span>
+          <span className="font-bold text-primary">
+            {hover.day.count} action{hover.day.count === 1 ? '' : 's'}
+          </span>{' '}
+          on {formatDay(hover.day.date)}
         </div>
       )}
-
-      <figcaption className="flex flex-wrap items-center justify-between gap-2 mt-2 text-xs text-slate-400">
-        <span>{total} {total === 1 ? 'activity' : 'activities'} · {activeDays} active days</span>
-        <span className="flex items-center gap-1" aria-hidden="true">
-          Less
-          {[EMPTY, ...RAMP].map((c) => <span key={c} className="inline-block w-[11px] h-[11px] rounded-[2px] border border-white/[0.04]" style={{ background: c }} />)}
-          More
-        </span>
-      </figcaption>
     </figure>
   );
 };
