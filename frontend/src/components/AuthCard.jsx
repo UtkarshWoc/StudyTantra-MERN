@@ -1,28 +1,46 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
 
-export const authInputClass = "w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500/40 focus:bg-white/[0.06] focus:shadow-[0_0_20px_rgba(245,158,11,0.08)] transition-all duration-300";
-export const authButtonClass = "w-full py-3 rounded-xl text-[#0b1120] font-extrabold text-sm bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 shadow-lg shadow-amber-900/30 hover:shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-60 btn-press cursor-pointer";
+export const authInputClass =
+  'w-full pl-10 pr-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant/40 text-sm font-body text-on-surface placeholder:text-outline focus:outline-none focus:border-primary/60 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all duration-200';
 
-// Centered card used by the smaller auth screens (forgot/reset password, verify email).
+export const authButtonClass =
+  'w-full py-3.5 rounded-xl text-on-primary font-semibold text-xs tracking-wide uppercase font-label bg-primary hover:bg-primary/95 shadow-md shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-60 transition-all cursor-pointer active:scale-[0.99]';
+
+// Centered card used by smaller auth screens (forgot/reset password, verify email).
 const AuthCard = ({ title, subtitle, children, footer }) => (
-  <div className="min-h-screen flex items-center justify-center px-6 py-12 bg-[#0b1120] overflow-hidden relative">
-    {/* Background orb */}
-    <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/[0.04] blur-[80px] animate-float" />
+  <div className="min-h-screen flex items-center justify-center px-6 py-12 bg-background overflow-hidden relative font-body text-on-surface">
+    {/* Ambient Glow Orbs */}
+    <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-primary-fixed/30 blur-[100px] pointer-events-none" />
+    <div className="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] rounded-full bg-secondary-fixed/30 blur-[80px] pointer-events-none" />
+
     <div className="w-full max-w-md relative z-10 animate-slide-up">
-      <Link to="/login" className="flex items-center justify-center gap-3 mb-8 group">
-        <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg group-hover:shadow-amber-500/30 transition-all duration-300"><BookOpen size={22} /></div>
-        <span className="text-2xl font-extrabold text-slate-100">StudyTantra</span>
-      </Link>
-      <div className="glass-card rounded-3xl p-8">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-extrabold text-white mb-1">{title}</h1>
-          {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
+      {/* Brand Header */}
+      <Link to="/login" className="flex items-center justify-center gap-3 mb-8 group" aria-label="StudyTantra Home">
+        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm group-hover:scale-105 transition-transform">
+          <span className="material-symbols-outlined text-2xl">local_fire_department</span>
         </div>
+        <div className="flex items-baseline gap-2">
+          <span className="font-headline text-3xl font-bold tracking-tight text-on-surface">StudyTantra</span>
+          <span className="text-[10px] font-label font-bold uppercase tracking-wider text-primary bg-primary-fixed px-1.5 py-0.5 rounded">
+            Sahara
+          </span>
+        </div>
+      </Link>
+
+      <div className="relative bg-surface-container-lowest rounded-2xl p-8 sm:p-10 shadow-lg shadow-on-surface/5 border border-outline-variant/30">
+        {/* Soft Accent Trim Top Line */}
+        <div className="absolute top-0 left-8 right-8 h-1 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full opacity-60" />
+
+        <div className="text-center mb-6">
+          <h1 className="font-headline text-2xl sm:text-3xl font-semibold text-on-surface mb-1.5">{title}</h1>
+          {subtitle && <p className="text-xs sm:text-sm text-on-surface-variant font-body">{subtitle}</p>}
+        </div>
+
         {children}
       </div>
-      {footer && <div className="text-center text-sm text-slate-500 mt-6">{footer}</div>}
+
+      {footer && <div className="text-center text-xs text-on-surface-variant font-label mt-6">{footer}</div>}
     </div>
   </div>
 );

@@ -21,7 +21,6 @@ const ResetPassword = () => {
     setStatus({ loading: true, done: false, error: '' });
     try {
       await api.post('/auth/reset-password', { token, password });
-      // Every session was revoked server-side; clear this tab's state too.
       if (user) await logout();
       setStatus({ loading: false, done: true, error: '' });
     } catch (error) {
@@ -31,41 +30,66 @@ const ResetPassword = () => {
 
   if (!token) {
     return (
-      <AuthCard title="Invalid link" subtitle="This password reset link is missing its token.">
-        <Link to="/forgot-password" className={authButtonClass}>Request a new link</Link>
+      <AuthCard title="Invalid Link" subtitle="This password reset link is missing its authentication token.">
+        <Link to="/forgot-password" className={authButtonClass}>
+          Request a New Link
+        </Link>
       </AuthCard>
     );
   }
 
   return (
-    <AuthCard title="Choose a new password" subtitle="You'll be signed out of all devices.">
+    <AuthCard title="Choose a New Password" subtitle="Your credentials will be updated across all active devices.">
       {status.done ? (
-        <div className="text-center text-slate-300 space-y-4">
-          <CheckCircle2 className="mx-auto text-emerald-400" size={40} />
-          <p className="text-sm">Your password has been updated.</p>
-          <Link to="/login" className={authButtonClass}>Sign in</Link>
+        <div className="text-center text-on-surface-variant space-y-4 py-2">
+          <CheckCircle2 className="mx-auto text-emerald-600" size={40} />
+          <p className="text-xs leading-relaxed">Your password has been successfully secured and updated.</p>
+          <Link to="/login" className={authButtonClass}>
+            Sign In with New Password
+          </Link>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {status.error && (
-            <div className="p-3 rounded-xl text-sm font-semibold bg-red-950/30 text-red-300 border border-red-800/40">
-              {status.error} {/expired|invalid/i.test(status.error) && <Link to="/forgot-password" className="underline">Request a new link</Link>}
+            <div className="p-3 rounded-xl text-xs font-semibold bg-error-container text-on-error-container border border-error/20">
+              {status.error}{' '}
+              {/expired|invalid/i.test(status.error) && (
+                <Link to="/forgot-password" className="underline font-bold">
+                  Request a new link
+                </Link>
+              )}
             </div>
           )}
           {[
-            { id: 'password', label: 'New password', value: password, onChange: setPassword, placeholder: 'Min. 8 characters' },
-            { id: 'confirm', label: 'Confirm password', value: confirm, onChange: setConfirm, placeholder: 'Re-enter password' },
+            { id: 'password', label: 'New Password', value: password, onChange: setPassword, placeholder: 'Min. 8 characters' },
+            { id: 'confirm', label: 'Confirm New Password', value: confirm, onChange: setConfirm, placeholder: 'Re-enter password' },
           ].map((field) => (
             <div key={field.id}>
-              <label htmlFor={field.id} className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">{field.label}</label>
+              <label htmlFor={field.id} className="block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+                {field.label}
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input id={field.id} type="password" autoComplete="new-password" value={field.value} onChange={(e) => field.onChange(e.target.value)} className={authInputClass} placeholder={field.placeholder} />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
+                <input
+                  id={field.id}
+                  type="password"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className={authInputClass}
+                  placeholder={field.placeholder}
+                />
               </div>
             </div>
           ))}
           <button type="submit" disabled={status.loading} className={authButtonClass}>
-            {status.loading ? <><Loader2 className="animate-spin w-4 h-4" /> Saving...</> : 'Update password'}
+            {status.loading ? (
+              <>
+                <Loader2 className="animate-spin w-4 h-4" />
+                <span>Updating Password...</span>
+              </>
+            ) : (
+              'Set New Password'
+            )}
           </button>
         </form>
       )}
