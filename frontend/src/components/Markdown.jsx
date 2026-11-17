@@ -7,7 +7,9 @@ const CITATION = /\[p\. (\d+)(?:-(\d+))?\]/g;
 // Turn "[p. 12]" / "[p. 3-4]" into markdown links with a private scheme the
 // link renderer recognises; everything else renders as normal Markdown.
 const linkifyCitations = (text) =>
-  text.replace(CITATION, (match, from, to) => `[p. ${from}${to ? `-${to}` : ''}](#cite-${from})`);
+  typeof text === 'string'
+    ? text.replace(CITATION, (match, from, to) => `[p. ${from}${to ? `-${to}` : ''}](#cite-${from})`)
+    : String(text ?? '');
 
 /**
  * Renders AI Markdown safely (no raw HTML). Page citations become buttons

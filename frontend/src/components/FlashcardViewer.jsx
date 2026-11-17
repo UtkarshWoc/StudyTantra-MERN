@@ -117,6 +117,15 @@ const FlashcardViewer = ({ cards = [], onCardReviewed }) => {
   }
 
   const currentCard = displayCards[currentIndex];
+  if (!currentCard) {
+    return (
+      <div className="w-full bg-surface-container-low rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[300px] max-w-2xl mx-auto border border-outline-variant/30">
+        <span className="material-symbols-outlined text-4xl text-outline mb-2">style</span>
+        <h3 className="font-headline text-2xl font-bold text-on-surface mb-1">Session Complete</h3>
+        <p className="text-xs text-on-surface-variant font-body">All cards reviewed.</p>
+      </div>
+    );
+  }
 
   const handleResponse = (known) => {
     onCardReviewed?.(currentCard.id, known ? 'good' : 'again');

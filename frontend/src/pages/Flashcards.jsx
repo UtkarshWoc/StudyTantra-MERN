@@ -16,15 +16,15 @@ import { defaultOptions, toRequestBody } from '../lib/generation';
 import { downloadFromApi } from '../lib/download';
 
 const toViewerCard = (card) => ({
-  id: card._id,
-  front: card.question,
-  back: card.answer,
-  topic: card.topic || 'General',
+  id: card?._id,
+  front: card?.question || '',
+  back: card?.answer || '',
+  topic: card?.topic || 'General',
 });
 
 const DeckList = ({ cards, onDelete }) => (
   <ul className="divide-y divide-outline-variant/20 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs font-body">
-    {cards.map((card) => (
+    {(Array.isArray(cards) ? cards : []).map((card) => (
       <li
         key={card._id}
         className="flex items-start gap-4 p-5 hover:bg-surface-container-low transition-colors group"
@@ -65,7 +65,7 @@ const Flashcards = () => {
   const [view, setView] = useState('study');
 
   const { data: cards, isLoading: loadingCards } = useFlashcards(selectedDocId);
-  const flashcards = cards ? cards.map(toViewerCard) : null;
+  const flashcards = Array.isArray(cards) ? cards.map(toViewerCard) : null;
   const deleteCard = useDeleteFlashcard(selectedDocId);
   const submitReview = useSubmitReview();
 
@@ -244,7 +244,7 @@ const Flashcards = () => {
               <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-container-low border border-outline-variant/30" role="tablist">
                 {[
                   { id: 'study', label: 'Practice Deck', icon: Layers },
-                  { id: 'list', label: `All Cards (${cards.length})`, icon: List },
+                  { id: 'list', label: `All Cards (${Array.isArray(cards) ? cards.length : 0})`, icon: List },
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -266,12 +266,12 @@ const Flashcards = () => {
 
             {view === 'study' ? (
               <FlashcardViewer
-                key={`${selectedDocId}-${cards.length}`}
+                key={`${selectedDocId}-${Array.isArray(cards) ? cards.length : 0}`}
                 cards={flashcards}
                 onCardReviewed={(id, rating) => submitReview.mutate({ id, rating })}
               />
             ) : (
-              <DeckList cards={cards} onDelete={(id) => deleteCard.mutate(id)} />
+              <DeckList cards={Array.isArray(cards) ? cards : []} onDelete={(id) => deleteCard.mutate(id)} />
             )}
           </div>
         ) : selectedDocId && !generating && flashcards !== null ? (
