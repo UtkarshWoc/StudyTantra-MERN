@@ -179,7 +179,7 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 pb-3 text-sm text-slate-300 border-b border-white/[0.06] mb-3">
+      <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 mb-3 text-xs font-label">
         {/* Page navigation */}
         <div className="flex items-center gap-1.5">
           <button
@@ -187,7 +187,7 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
             onClick={() => goTo(currentPage - 1)}
             disabled={currentPage <= 1}
             aria-label="Previous page"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+            className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
           >
             <ChevronLeft size={18} />
           </button>
@@ -203,16 +203,16 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
               value={pageInput}
               onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))}
               onBlur={() => setPageInput(String(currentPage))}
-              className="w-12 text-center py-1 rounded-lg bg-white/[0.05] border border-white/[0.1] text-slate-200 focus:outline-none focus:border-amber-500/40 font-semibold"
+              className="w-12 text-center py-1 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary font-bold"
             />
-            <span className="text-slate-500">/ {numPages ?? '–'}</span>
+            <span className="text-on-surface-variant">/ {numPages ?? '–'}</span>
           </form>
           <button
             type="button"
             onClick={() => goTo(currentPage + 1)}
             disabled={!numPages || currentPage >= numPages}
             aria-label="Next page"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+            className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
           >
             <ChevronRight size={18} />
           </button>
@@ -221,14 +221,14 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
         {/* View mode toggle & zoom controls */}
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
-          <div className="flex items-center p-0.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+          <div className="flex items-center p-0.5 rounded-lg bg-surface-container border border-outline-variant/30">
             <button
               type="button"
               onClick={() => setViewMode('scroll')}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'scroll'
-                  ? 'bg-amber-500/20 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.1)]'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
               title="Continuous scroll (top to down)"
             >
@@ -240,8 +240,8 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
               onClick={() => setViewMode('single')}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'single'
-                  ? 'bg-amber-500/20 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.1)]'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
               title="Single page view"
             >
@@ -256,14 +256,14 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
               type="button"
               onClick={() => setScale((s) => Math.max(MIN_SCALE, +(s - 0.15).toFixed(2)))}
               aria-label="Zoom out"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
+              className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container cursor-pointer transition-colors"
             >
               <ZoomOut size={16} />
             </button>
             <button
               type="button"
               onClick={() => setScale(1)}
-              className="px-2 py-1 rounded-md text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
+              className="px-2 py-1 rounded-md text-xs font-semibold text-on-surface hover:bg-surface-container cursor-pointer transition-colors"
               title="Fit width (100%)"
             >
               {Math.round(scale * 100)}%
@@ -272,7 +272,7 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
               type="button"
               onClick={() => setScale((s) => Math.min(MAX_SCALE, +(s + 0.15).toFixed(2)))}
               aria-label="Zoom in"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
+              className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container cursor-pointer transition-colors"
             >
               <ZoomIn size={16} />
             </button>
@@ -285,7 +285,7 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
         ref={containerRef}
         onMouseUp={handleMouseUp}
         onScroll={handleScroll}
-        className="relative flex-1 min-h-0 overflow-y-auto overflow-x-auto rounded-2xl bg-[#080d19]/80 border border-white/[0.04] p-4 select-text"
+        className="relative flex-1 min-h-0 overflow-y-auto overflow-x-auto rounded-2xl bg-surface-container-low border border-outline-variant/30 p-4 select-text"
       >
         <Document
           file={fileUrl}
@@ -367,7 +367,7 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
             role="toolbar"
             aria-label="Selection actions"
             style={{ top: Math.max(8, selection.top), left: selection.left }}
-            className="absolute z-30 -translate-x-1/2 flex items-center gap-0.5 p-1.5 rounded-xl bg-[#0f172a] border border-amber-500/30 shadow-2xl shadow-amber-500/10 backdrop-blur-md animate-scale-in"
+            className="absolute z-30 -translate-x-1/2 flex items-center gap-1 p-1.5 rounded-xl bg-surface-container-lowest border border-outline-variant/40 shadow-xl backdrop-blur-md animate-scale-in font-label"
             onMouseUp={(e) => e.stopPropagation()}
           >
             {SELECTION_ACTIONS.map((action) => (
@@ -375,9 +375,9 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
                 key={action.id}
                 type="button"
                 onClick={() => runAction(action.id)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-white/10 hover:text-amber-300 whitespace-nowrap cursor-pointer transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-on-surface hover:bg-surface-container hover:text-primary whitespace-nowrap cursor-pointer transition-all"
               >
-                <action.icon size={13} className="text-amber-400" /> {action.label}
+                <action.icon size={13} className="text-primary" /> {action.label}
               </button>
             ))}
           </div>
