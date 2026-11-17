@@ -2,79 +2,298 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Slate / Navy Base */
-  --color-slate-950: #0b1120;
-  --color-slate-900: #111827;
-  --color-slate-800: #1e293b;
-  --color-slate-700: #334155;
-  --color-slate-600: #475569;
-  --color-slate-500: #64748b;
-  --color-slate-400: #94a3b8;
-  --color-slate-300: #cbd5e1;
-  --color-slate-200: #e2e8f0;
-  --color-slate-100: #f1f5f9;
-  --color-slate-50: #f8fafc;
+  --font-headline: "EB Garamond", Georgia, serif;
+  --font-display: "EB Garamond", Georgia, serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-label: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  /* Amber / Gold Accent */
+  /* Sahara theme colors mapped to CSS variables for smooth light/dark switching */
+  --color-primary: var(--primary);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary: var(--on-primary);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+  --color-inverse-primary: var(--inverse-primary);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+  --color-on-secondary-container: var(--on-secondary-container);
+
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-fixed: var(--tertiary-fixed);
+  --color-tertiary-fixed-dim: var(--tertiary-fixed-dim);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant: var(--on-tertiary-fixed-variant);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+
+  --color-background: var(--background);
+  --color-on-background: var(--on-background);
+
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-variant: var(--surface-variant);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-surface-tint: var(--surface-tint);
+
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+
+  --color-error: var(--error);
+  --color-error-container: var(--error-container);
+  --color-on-error: var(--on-error);
+  --color-on-error-container: var(--on-error-container);
+
+  /* Fallback and utility mappings */
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
+  --color-slate-600: var(--slate-600);
+  --color-slate-500: var(--slate-500);
+  --color-slate-400: var(--slate-400);
+  --color-slate-300: var(--slate-300);
+  --color-slate-200: var(--slate-200);
+  --color-slate-100: var(--slate-100);
+  --color-slate-50: var(--slate-50);
+
   --color-amber-950: #451a03;
   --color-amber-900: #78350f;
   --color-amber-800: #92400e;
   --color-amber-700: #b45309;
-  --color-amber-600: #d97706;
-  --color-amber-500: #f59e0b;
-  --color-amber-400: #fbbf24;
-  --color-amber-300: #fcd34d;
+  --color-amber-600: #c2652a;
+  --color-amber-500: #c2652a;
+  --color-amber-400: #f0a878;
+  --color-amber-300: #fbe8d8;
   --color-amber-100: #fef3c7;
   --color-amber-50: #fffbeb;
 
-  /* Emerald / Teal */
-  --color-emerald-900: #064e3b;
-  --color-emerald-700: #047857;
-  --color-emerald-500: #10b981;
-  --color-emerald-400: #34d399;
-
-  /* Surface Glass */
-  --color-glass: rgba(255,255,255,0.06);
-  --color-glass-border: rgba(255,255,255,0.08);
-
   /* Animations */
-  --animate-fade-in: fade-in 0.4s ease-out both;
-  --animate-slide-up: slide-up 0.4s ease-out both;
-  --animate-slide-down: slide-down 0.3s ease-out both;
-  --animate-scale-in: scale-in 0.3s ease-out both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-slide-up: slide-up 0.35s ease-out both;
+  --animate-slide-down: slide-down 0.25s ease-out both;
+  --animate-scale-in: scale-in 0.25s ease-out both;
   --animate-glow-pulse: glow-pulse 3s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
-  --animate-shimmer: shimmer 2s linear infinite;
 }
 
-html { scroll-behavior: smooth; }
+:root {
+  /* Sahara Warm Parchment Palette (Default / Light) */
+  --primary: #c2652a;
+  --primary-fixed: #fbe8d8;
+  --primary-fixed-dim: #f0a878;
+  --primary-container: #e08850;
+  --on-primary: #ffffff;
+  --on-primary-container: #fbe8d8;
+  --on-primary-fixed: #401a08;
+  --on-primary-fixed-variant: #8a4518;
+  --inverse-primary: #f0a878;
+
+  --secondary: #78706a;
+  --secondary-container: #eae2da;
+  --on-secondary: #ffffff;
+  --secondary-fixed: #eae2da;
+  --secondary-fixed-dim: #cec6be;
+  --on-secondary-fixed: #2a2420;
+  --on-secondary-fixed-variant: #504840;
+  --on-secondary-container: #605850;
+
+  --tertiary: #8c3c3c;
+  --tertiary-container: #d47070;
+  --on-tertiary: #ffffff;
+  --tertiary-fixed: #fce0e0;
+  --tertiary-fixed-dim: #e8a0a0;
+  --on-tertiary-fixed: #2e1515;
+  --on-tertiary-fixed-variant: #6e3030;
+  --on-tertiary-container: #3a2020;
+
+  --background: #faf5ee;
+  --on-background: #3a302a;
+
+  --surface: #faf5ee;
+  --surface-dim: #dcd6cc;
+  --surface-bright: #faf5ee;
+  --surface-variant: #ece6dc;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f6f0e8;
+  --surface-container: #f2ece4;
+  --surface-container-high: #ece6dc;
+  --surface-container-highest: #e6e0d6;
+  --surface-tint: #c2652a;
+
+  --on-surface: #3a302a;
+  --on-surface-variant: #605850;
+  --outline: #9a9088;
+  --outline-variant: #d8d0c8;
+  --inverse-surface: #3a302a;
+  --inverse-on-surface: #faf5ee;
+
+  --error: #c0392b;
+  --error-container: #fce4e0;
+  --on-error: #ffffff;
+  --on-error-container: #7a1a10;
+
+  --slate-950: #14110f;
+  --slate-900: #231f1c;
+  --slate-800: #302a25;
+  --slate-700: #484039;
+  --slate-600: #605850;
+  --slate-500: #78706a;
+  --slate-400: #9a9088;
+  --slate-300: #cec6be;
+  --slate-200: #d8d0c8;
+  --slate-100: #eae2da;
+  --slate-50: #faf5ee;
+}
+
+.dark {
+  /* Obsidian Theme (Sahara Warm Dark) */
+  --primary: #f0a878;
+  --primary-fixed: #3a2214;
+  --primary-fixed-dim: #5c2f15;
+  --primary-container: #c2652a;
+  --on-primary: #2a1408;
+  --on-primary-container: #fbe8d8;
+  --on-primary-fixed: #fbe8d8;
+  --on-primary-fixed-variant: #f0a878;
+  --inverse-primary: #c2652a;
+
+  --secondary: #a89f97;
+  --secondary-container: #332d28;
+  --on-secondary: #181412;
+  --secondary-fixed: #332d28;
+  --secondary-fixed-dim: #26211d;
+  --on-secondary-fixed: #eae2da;
+  --on-secondary-fixed-variant: #cec6be;
+  --on-secondary-container: #cec6be;
+
+  --tertiary: #e8a0a0;
+  --tertiary-container: #8c3c3c;
+  --on-tertiary: #2e1515;
+  --tertiary-fixed: #3a2020;
+  --tertiary-fixed-dim: #2e1515;
+  --on-tertiary-fixed: #fce0e0;
+  --on-tertiary-fixed-variant: #e8a0a0;
+  --on-tertiary-container: #fce0e0;
+
+  --background: #14110f;
+  --on-background: #faf5ee;
+
+  --surface: #1e1b18;
+  --surface-dim: #181412;
+  --surface-bright: #292420;
+  --surface-variant: #302a25;
+  --surface-container-lowest: #14110f;
+  --surface-container-low: #1a1614;
+  --surface-container: #231e1a;
+  --surface-container-high: #2c2621;
+  --surface-container-highest: #38302a;
+  --surface-tint: #f0a878;
+
+  --on-surface: #faf5ee;
+  --on-surface-variant: #cec6be;
+  --outline: #78706a;
+  --outline-variant: #484039;
+  --inverse-surface: #faf5ee;
+  --inverse-on-surface: #1e1b18;
+
+  --error: #e74c3c;
+  --error-container: #5c1810;
+  --on-error: #ffffff;
+  --on-error-container: #fce4e0;
+
+  --slate-950: #100d0c;
+  --slate-900: #1a1614;
+  --slate-800: #231e1a;
+  --slate-700: #2c2621;
+  --slate-600: #38302a;
+  --slate-500: #78706a;
+  --slate-400: #9a9088;
+  --slate-300: #cec6be;
+  --slate-200: #d8d0c8;
+  --slate-100: #eae2da;
+  --slate-50: #faf5ee;
+}
+
+html {
+  scroll-behavior: smooth;
+}
 
 body {
   margin: 0;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0b1120;
-  color: #f1f5f9;
+  background-color: var(--background);
+  color: var(--on-surface);
+}
+
+/* Material Symbols Outlined standard class */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
 }
 
 /* Focus ring */
-:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--outline);
+}
 
-/* ─── Keyframes ─── */
+/* Keyframes */
 @keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -84,7 +303,7 @@ body {
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.96); }
   to   { opacity: 1; transform: scale(1); }
 }
 
@@ -95,119 +314,36 @@ body {
 
 @keyframes float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  33%      { transform: translateY(-12px) rotate(1deg); }
-  66%      { transform: translateY(6px) rotate(-1deg); }
+  33%      { transform: translateY(-8px) rotate(0.5deg); }
+  66%      { transform: translateY(4px) rotate(-0.5deg); }
 }
 
-@keyframes shimmer {
-  from { background-position: -200% 0; }
-  to   { background-position: 200% 0; }
+/* 3D Card flip helper */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
 }
 
-@keyframes progress-fill {
-  from { width: 0; }
+/* Glass styling tailored to Sahara/Obsidian */
+.sahara-card {
+  background-color: var(--surface-container-low);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 30%, transparent);
+  box-shadow: 0 1px 8px rgba(58, 48, 42, 0.04);
 }
-
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+.sahara-card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-/* ─── Glass card ─── */
-.glass-card {
-  background: linear-gradient(135deg, rgba(17,24,39,0.8), rgba(17,24,39,0.6));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.03) inset,
-    0 4px 24px -4px rgba(0,0,0,0.4);
-}
-
-.glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.glass-card-hover:hover {
-  border-color: rgba(245,158,11,0.3);
-  box-shadow:
-    0 0 0 1px rgba(245,158,11,0.1) inset,
-    0 8px 32px -8px rgba(245,158,11,0.15),
-    0 4px 24px -4px rgba(0,0,0,0.4);
-  transform: translateY(-2px);
-}
-
-/* ─── Gradient border ─── */
-.gradient-border {
-  position: relative;
-}
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(245,158,11,0.05), rgba(245,158,11,0.2));
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask-composite: xor;
-  pointer-events: none;
-}
-
-/* ─── Glow effect ─── */
-.glow-amber {
-  box-shadow: 0 0 20px rgba(245,158,11,0.15), 0 0 60px rgba(245,158,11,0.05);
-}
-
-/* ─── Staggered children animation ─── */
-.stagger-children > * {
-  animation: slide-up 0.4s ease-out both;
-}
-.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2)  { animation-delay: 50ms; }
-.stagger-children > *:nth-child(3)  { animation-delay: 100ms; }
-.stagger-children > *:nth-child(4)  { animation-delay: 150ms; }
-.stagger-children > *:nth-child(5)  { animation-delay: 200ms; }
-.stagger-children > *:nth-child(6)  { animation-delay: 250ms; }
-.stagger-children > *:nth-child(7)  { animation-delay: 300ms; }
-.stagger-children > *:nth-child(8)  { animation-delay: 350ms; }
-.stagger-children > *:nth-child(9)  { animation-delay: 400ms; }
-.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
-
-/* ─── Shimmer placeholder ─── */
-.shimmer {
-  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
-
-/* ─── Button press effect ─── */
-.btn-press {
-  transition: all 0.15s ease;
-}
-.btn-press:hover {
+.sahara-card-hover:hover {
+  background-color: var(--surface-container);
+  box-shadow: 0 4px 16px rgba(58, 48, 42, 0.08);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-.btn-press:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow: none;
-}
-
-/* ─── Animated underline for links ─── */
-.link-underline {
-  position: relative;
-}
-.link-underline::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: #f59e0b;
-  border-radius: 1px;
-  transition: width 0.3s ease;
-}
-.link-underline:hover::after {
-  width: 100%;
 }
