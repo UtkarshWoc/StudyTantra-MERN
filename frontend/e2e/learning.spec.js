@@ -36,7 +36,7 @@ test('spaced repetition, streak, planner and collections', async ({ page }) => {
   await page.goto('/flashcards');
   await page.getByRole('button', { name: /generate deck/i }).click();
   await expect(page.getByText('Mock question 1?')).toBeVisible();
-  await page.getByRole('link', { name: /review with spaced repetition/i }).click();
+  await page.getByRole('link', { name: /review spaced intervals/i }).click();
   await expect(page).toHaveURL(/\/review\?document=/);
   await expect(page.getByRole('button', { name: 'Show answer' })).toBeVisible();
   await page.keyboard.press('Space');
