@@ -46,7 +46,7 @@ test('spaced repetition, streak, planner and collections', async ({ page }) => {
 
   // Dashboard reflects the study session
   await page.goto('/dashboard');
-  await expect(page.getByText('1 day', { exact: true })).toBeVisible();
+  await expect(page.getByText('Daily Habit Streak', { exact: true }).locator('xpath=ancestor::section')).toContainText(/1\s+day/);
   await expect(page.getByRole('meter', { name: 'Cards reviewed today' })).toHaveAttribute('aria-valuenow', '1');
   await expect(page.getByRole('img', { name: /study activity over the last year/i })).toBeVisible();
 
