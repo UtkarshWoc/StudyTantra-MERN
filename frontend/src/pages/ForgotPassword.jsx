@@ -22,27 +22,55 @@ const ForgotPassword = () => {
 
   return (
     <AuthCard
-      title="Reset your password"
-      subtitle="We'll email you a link to choose a new password."
-      footer={<Link to="/login" className="font-bold text-amber-400 hover:text-amber-300">Back to sign in</Link>}
+      title="Reset Your Password"
+      subtitle="We'll send a password reset link to your email address."
+      footer={
+        <Link to="/login" className="font-semibold text-primary hover:underline font-label text-xs">
+          ← Return to Sign In
+        </Link>
+      }
     >
       {status.sent ? (
-        <div className="text-center text-slate-300 space-y-3">
-          <CheckCircle2 className="mx-auto text-emerald-400" size={40} />
-          <p className="text-sm">If an account exists for <span className="font-semibold text-slate-100">{email}</span>, a reset link is on its way. It expires in 1 hour.</p>
+        <div className="text-center text-on-surface-variant space-y-3 py-2">
+          <CheckCircle2 className="mx-auto text-emerald-600" size={40} />
+          <p className="text-xs leading-relaxed">
+            If an account exists for <span className="font-semibold text-on-surface">{email}</span>, a secure password recovery link has been dispatched. Link valid for 1 hour.
+          </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {status.error && <div className="p-3 rounded-xl text-sm font-semibold bg-red-950/30 text-red-300 border border-red-800/40">{status.error}</div>}
+          {status.error && (
+            <div className="p-3 rounded-xl text-xs font-semibold bg-error-container text-on-error-container border border-error/20 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px] text-error shrink-0">error</span>
+              <span>{status.error}</span>
+            </div>
+          )}
           <div>
-            <label htmlFor="email" className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Email</label>
+            <label htmlFor="email" className="block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+              Email Address
+            </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInputClass} placeholder="you@example.com" />
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={authInputClass}
+                placeholder="name@example.com"
+              />
             </div>
           </div>
           <button type="submit" disabled={status.loading} className={authButtonClass}>
-            {status.loading ? <><Loader2 className="animate-spin w-4 h-4" /> Sending...</> : 'Send reset link'}
+            {status.loading ? (
+              <>
+                <Loader2 className="animate-spin w-4 h-4" />
+                <span>Sending Recovery Link...</span>
+              </>
+            ) : (
+              'Send Recovery Link'
+            )}
           </button>
         </form>
       )}

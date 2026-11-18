@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Search, Command } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
+import { useTheme } from '../context/theme';
 
 const titles = [
   ['/dashboard', 'Dashboard'],
-  ['/review', 'Review'],
-  ['/planner', 'Planner'],
+  ['/review', 'Spaced Review'],
+  ['/planner', 'Exam Planner'],
   ['/collections', 'Collection'],
   ['/documents', 'Library'],
   ['/flashcards', 'Flashcards'],
@@ -16,8 +16,9 @@ const titles = [
   ['/settings', 'Settings'],
 ];
 
-const Header = () => {
+const Header = ({ onToggleMobileSidebar }) => {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState('');
@@ -31,12 +32,41 @@ const Header = () => {
     navigate(q ? `/documents?q=${encodeURIComponent(q)}` : '/documents');
   };
 
+  const toggleTheme = () => {
+    if (theme === 'dark') {
+      setTheme('light');
+    } else {
+      setTheme('dark');
+    }
+  };
+
   return (
-    <header className="h-16 bg-[#0b1120]/60 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-6 sticky top-0 z-10">
-      <div className="flex-1 flex items-center gap-6 min-w-0">
-        <h1 className="text-base font-bold tracking-tight text-slate-100 shrink-0 hidden sm:block animate-fade-in">{title}</h1>
-        <form onSubmit={handleSearch} role="search" className="max-w-md w-full relative hidden md:block">
-          <Search size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-200 ${focused ? 'text-amber-400' : 'text-slate-500'}`} />
+    <header className="h-16 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/30 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-20 shadow-[0_1px_8px_rgba(58,48,42,0.04)]">
+      {/* Mobile Drawer Trigger & Page Title */}
+      <div className="flex items-center gap-4 flex-1 min-w-0 max-w-xl">
+        {onToggleMobileSidebar && (
+          <button
+            onClick={onToggleMobileSidebar}
+            aria-label="Toggle mobile menu"
+            className="md:hidden p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">menu</span>
+          </button>
+        )}
+
+        <h1 className="font-headline text-lg font-bold text-on-surface shrink-0 hidden sm:block">
+          {title}
+        </h1>
+
+        {/* Global Search Input */}
+        <form onSubmit={handleSearch} role="search" className="w-full relative hidden md:block">
+          <span
+            className={`material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] transition-colors pointer-events-none ${
+              focused ? 'text-primary' : 'text-outline'
+            }`}
+          >
+            search
+          </span>
           <input
             type="search"
             value={query}
@@ -44,23 +74,47 @@ const Header = () => {
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             aria-label="Search documents"
-            className={`w-full pl-10 pr-16 py-2 rounded-xl bg-white/[0.04] border text-sm text-slate-200 placeholder-slate-500 focus:outline-none transition-all duration-300 ${focused ? 'border-amber-500/40 bg-white/[0.08] shadow-[0_0_20px_rgba(245,158,11,0.08)]' : 'border-white/[0.06]'}`}
+            className={`w-full pl-10 pr-12 py-2 rounded-xl text-xs font-body text-on-surface placeholder:text-outline bg-surface-container-low border border-transparent focus:outline-none focus:border-primary/40 focus:bg-surface-container-lowest transition-all ${
+              focused ? 'shadow-[0_2px_12px_rgba(194,101,42,0.08)]' : ''
+            }`}
             placeholder="Search documents..."
           />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium text-slate-500 bg-white/[0.06] border border-white/[0.08]">
-            <Command size={10} />K
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-label font-semibold text-outline bg-surface-container-high/60">
+            ⌘K
           </kbd>
         </form>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
-        <button onClick={() => navigate('/profile')} className="group flex items-center gap-2.5 hover:bg-white/[0.04] rounded-xl px-2.5 py-1.5 transition-all duration-200 cursor-pointer" aria-label="Profile">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-extrabold shadow-lg shadow-amber-900/20 ring-2 ring-amber-500/20 group-hover:ring-amber-500/40 group-hover:shadow-amber-500/20 transition-all duration-300">
+      {/* Right Controls: Theme Toggle & User Avatar */}
+      <div className="flex items-center gap-3 shrink-0 ml-4">
+        {/* Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to Sahara Light' : 'Switch to Obsidian Dark'}
+          title={theme === 'dark' ? 'Switch to Sahara Light' : 'Switch to Obsidian Dark'}
+          className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+          </span>
+        </button>
+
+        {/* User Profile Avatar Pill */}
+        <button
+          onClick={() => navigate('/profile')}
+          className="group flex items-center gap-2.5 p-1 rounded-xl hover:bg-surface-container transition-colors cursor-pointer"
+          aria-label="Profile"
+        >
+          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-on-primary text-xs font-bold shadow-sm ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all">
             {user?.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
-          <div className="text-right hidden md:block leading-tight">
-            <p className="text-[13px] font-semibold text-slate-200 group-hover:text-white transition-colors">{user?.name || 'User'}</p>
-            <p className="text-[11px] text-slate-500 font-medium mt-0.5">Free plan</p>
+          <div className="text-right hidden sm:block leading-tight pr-1">
+            <p className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors">
+              {user?.name || 'User'}
+            </p>
+            <p className="text-[10px] text-on-surface-variant font-label truncate max-w-[120px]">
+              {user?.email || 'Account'}
+            </p>
           </div>
         </button>
       </div>

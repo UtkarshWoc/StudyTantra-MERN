@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { RotateCcw, Check, X as XIcon, Flame, AlertTriangle, RefreshCw } from 'lucide-react';
+import Markdown from './Markdown';
 
 const FlashcardViewer = ({ cards = [], onCardReviewed }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -12,7 +13,7 @@ const FlashcardViewer = ({ cards = [], onCardReviewed }) => {
   const summary = useMemo(() => {
     if (!isFinished) return null;
     const topicStats = {};
-    results.forEach(res => {
+    results.forEach((res) => {
       if (!topicStats[res.topic]) topicStats[res.topic] = { total: 0, known: 0 };
       topicStats[res.topic].total += 1;
       if (res.known) topicStats[res.topic].known += 1;
@@ -25,76 +26,90 @@ const FlashcardViewer = ({ cards = [], onCardReviewed }) => {
       else weakTopics.push({ topic, ...stats, percentage });
     });
     return {
-      strongTopics: strongTopics.sort((a,b) => b.percentage - a.percentage),
-      weakTopics: weakTopics.sort((a,b) => a.percentage - b.percentage),
-      totalKnown: results.filter(r => r.known).length,
-      totalCards: results.length
+      strongTopics: strongTopics.sort((a, b) => b.percentage - a.percentage),
+      weakTopics: weakTopics.sort((a, b) => a.percentage - b.percentage),
+      totalKnown: results.filter((r) => r.known).length,
+      totalCards: results.length,
     };
   }, [isFinished, results]);
 
   if (displayCards.length === 0) {
     return (
-      <div className="w-full glass-card rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[300px] max-w-2xl mx-auto">
-        <h3 className="text-xl font-bold text-white mb-2">No flashcards found</h3>
-        <p className="text-slate-400">Generate a fresh deck to start studying.</p>
+      <div className="w-full bg-surface-container-low rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[300px] max-w-2xl mx-auto border border-outline-variant/30">
+        <span className="material-symbols-outlined text-4xl text-outline mb-2">style</span>
+        <h3 className="font-headline text-2xl font-bold text-on-surface mb-1">No flashcards found</h3>
+        <p className="text-xs text-on-surface-variant font-body">Generate a fresh deck to begin active recall.</p>
       </div>
     );
   }
 
   if (isFinished && summary) {
     return (
-      <div className="w-full max-w-3xl mx-auto glass-card rounded-3xl p-8 animate-scale-in">
+      <div className="w-full max-w-3xl mx-auto bg-surface-container-low rounded-3xl p-8 sm:p-10 border border-outline-variant/30 shadow-sm animate-scale-in font-body">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white mb-2">Revision Summary</h2>
-          <p className="text-slate-400 text-lg">
-            You scored <span className="font-bold text-amber-400">{summary.totalKnown} / {summary.totalCards}</span> correctly!
+          <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary bg-primary-fixed px-3 py-1 rounded-full">
+            Revision Session Complete
+          </span>
+          <h2 className="font-headline text-3xl sm:text-4xl font-bold text-on-surface mt-3 mb-2">
+            Session Performance Summary
+          </h2>
+          <p className="text-sm text-on-surface-variant font-body">
+            You scored <strong className="text-primary font-bold">{summary.totalKnown} / {summary.totalCards}</strong> items correctly ({Math.round((summary.totalKnown / Math.max(1, summary.totalCards)) * 100)}% retention).
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8 stagger-children">
-          <div className="rounded-2xl p-6 bg-red-500/[0.06] border border-red-500/20">
-            <div className="flex items-center text-red-400 font-bold text-lg mb-4">
-              <AlertTriangle className="mr-2" size={20} /> Weak Topics
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="rounded-2xl p-6 bg-error-container/40 border border-error/20">
+            <div className="flex items-center text-error font-bold text-base mb-3 font-headline">
+              <AlertTriangle className="mr-2" size={18} /> Priority Weak Topics
             </div>
             {summary.weakTopics.length > 0 ? (
-              <ul className="space-y-2.5">
-                {summary.weakTopics.map(t => (
-                  <li key={t.topic} className="flex justify-between items-center bg-white/[0.04] p-3 rounded-xl border border-white/[0.06]">
-                    <span className="font-semibold text-slate-200">{t.topic}</span>
-                    <span className="text-xs font-bold px-2 py-1 bg-red-500/15 text-red-400 rounded-full">{Math.round(t.percentage)}%</span>
+              <ul className="space-y-2">
+                {summary.weakTopics.map((item, idx) => (
+                  <li key={idx} className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-on-surface">{item.topic}</span>
+                    <span className="text-error font-bold font-label">
+                      {Math.round(item.percentage)}% ({item.known}/{item.total})
+                    </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-slate-500 text-sm italic">No weak spots. Great job!</p>
+              <p className="text-xs text-on-surface-variant">No critical weaknesses detected in this run.</p>
             )}
           </div>
 
-          <div className="rounded-2xl p-6 bg-emerald-500/[0.06] border border-emerald-500/20">
-            <div className="flex items-center text-emerald-400 font-bold text-lg mb-4">
-              <Flame className="mr-2" size={20} /> Strong Topics
+          <div className="rounded-2xl p-6 bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center text-emerald-700 dark:text-emerald-400 font-bold text-base mb-3 font-headline">
+              <Flame className="mr-2" size={18} /> High Retention Topics
             </div>
             {summary.strongTopics.length > 0 ? (
-              <ul className="space-y-2.5">
-                {summary.strongTopics.map(t => (
-                  <li key={t.topic} className="flex justify-between items-center bg-white/[0.04] p-3 rounded-xl border border-white/[0.06]">
-                    <span className="font-semibold text-slate-200">{t.topic}</span>
-                    <span className="text-xs font-bold px-2 py-1 bg-emerald-500/15 text-emerald-400 rounded-full">{Math.round(t.percentage)}%</span>
+              <ul className="space-y-2">
+                {summary.strongTopics.map((item, idx) => (
+                  <li key={idx} className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-on-surface">{item.topic}</span>
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold font-label">
+                      {Math.round(item.percentage)}% ({item.known}/{item.total})
+                    </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-slate-500 text-sm italic">Keep studying to build strengths!</p>
+              <p className="text-xs text-on-surface-variant">Keep drilling to cement foundational recall.</p>
             )}
           </div>
         </div>
 
-        <div className="flex justify-center mt-8">
+        <div className="flex justify-center">
           <button
-            onClick={() => { setCurrentIndex(0); setResults([]); setIsFlipped(false); }}
-            className="flex items-center bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#0b1120] font-bold py-3 px-8 rounded-xl shadow-lg shadow-amber-900/20 btn-press cursor-pointer"
+            onClick={() => {
+              setCurrentIndex(0);
+              setIsFlipped(false);
+              setResults([]);
+            }}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-on-primary font-label text-xs font-semibold hover:bg-primary/95 transition-all shadow-sm cursor-pointer"
           >
-            <RefreshCw className="mr-2" size={20} /> Restart Deck
+            <RefreshCw size={15} /> Practice Deck Again
           </button>
         </div>
       </div>
@@ -102,81 +117,106 @@ const FlashcardViewer = ({ cards = [], onCardReviewed }) => {
   }
 
   const currentCard = displayCards[currentIndex];
+  if (!currentCard) {
+    return (
+      <div className="w-full bg-surface-container-low rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[300px] max-w-2xl mx-auto border border-outline-variant/30">
+        <span className="material-symbols-outlined text-4xl text-outline mb-2">style</span>
+        <h3 className="font-headline text-2xl font-bold text-on-surface mb-1">Session Complete</h3>
+        <p className="text-xs text-on-surface-variant font-body">All cards reviewed.</p>
+      </div>
+    );
+  }
 
-  const handleFlip = () => { if (!isFlipped) setIsFlipped(true); };
-
-  const handleAnswer = (known) => {
-    setResults([...results, { id: currentCard.id, topic: currentCard.topic, known }]);
-    if (onCardReviewed && currentCard.id) {
-      onCardReviewed(currentCard.id, known ? 3 : 1);
-    }
+  const handleResponse = (known) => {
+    onCardReviewed?.(currentCard.id, known ? 'good' : 'again');
+    setResults((prev) => [...prev, { id: currentCard.id, topic: currentCard.topic, known }]);
     setIsFlipped(false);
-    setTimeout(() => { setCurrentIndex(prev => prev + 1); }, 150);
+    setCurrentIndex((prev) => prev + 1);
   };
 
   return (
-    <div className="max-w-2xl mx-auto w-full flex flex-col items-center animate-fade-in">
-      {/* Progress Header */}
-      <div className="w-full flex justify-between items-center mb-6">
-        <span className="text-sm font-semibold text-slate-400 glass-card px-4 py-1.5 rounded-full tracking-wide">
-          Card {currentIndex + 1} of {displayCards.length}
-        </span>
-        <span className="text-xs font-bold bg-amber-500/10 text-amber-400 px-3 py-1.5 rounded-lg border border-amber-500/20 uppercase tracking-wider">
+    <div className="w-full max-w-2xl mx-auto flex flex-col items-center select-none font-body">
+      {/* Session Header / Progress */}
+      <div className="w-full flex items-center justify-between mb-4 px-1 text-xs font-label">
+        <span className="px-3 py-1 rounded-full bg-surface-container text-on-surface font-semibold text-[11px]">
           {currentCard.topic}
+        </span>
+        <span className="text-on-surface-variant font-medium">
+          Card <strong className="text-on-surface">{currentIndex + 1}</strong> of {displayCards.length}
         </span>
       </div>
 
-      {/* The Flashcard */}
+      {/* 3D Flashcard Container */}
       <div
-        className="relative w-full aspect-[4/3] sm:aspect-[3/2] cursor-pointer group mb-10"
-        onClick={handleFlip}
-        style={{ perspective: '1000px' }}
+        className="w-full min-h-[340px] perspective-1000 cursor-pointer"
+        onClick={() => setIsFlipped(!isFlipped)}
       >
         <div
-          className="w-full h-full duration-500 relative transition-transform rounded-3xl"
-          style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
+          className={`relative w-full min-h-[340px] rounded-3xl p-8 sm:p-10 flex flex-col justify-between transition-transform duration-500 transform-style-3d bg-surface-container-lowest border border-outline-variant/30 shadow-md ${
+            isFlipped ? 'rotate-y-180' : ''
+          }`}
         >
-          {/* Front (Question) */}
-          <div
-            className="absolute inset-0 glass-card gradient-border rounded-3xl flex flex-col p-8 md:p-12 items-center justify-center text-center"
-            style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-          >
-            <span className="absolute top-6 left-6 text-xs font-bold uppercase tracking-wider text-amber-500/60">Question</span>
-            <h3 className="text-2xl md:text-3xl font-bold text-white leading-tight">{currentCard.front}</h3>
-            <div className={`absolute bottom-6 flex items-center text-sm font-medium transition-all ${isFlipped ? 'opacity-0' : 'text-slate-500 opacity-80 group-hover:text-amber-400'}`}>
-              <RotateCcw size={16} className="mr-2" />
-              Click to reveal answer
+          {/* Card Front */}
+          <div className={`flex flex-col justify-between h-full backface-hidden ${isFlipped ? 'hidden' : 'flex'}`}>
+            <div>
+              <span className="text-[10px] font-label font-bold uppercase tracking-widest text-primary">
+                Question / Prompt
+              </span>
+              <div className="mt-4 font-headline text-2xl sm:text-3xl text-on-surface font-semibold leading-snug">
+                <Markdown>{currentCard.front}</Markdown>
+              </div>
+            </div>
+            <div className="pt-6 flex items-center justify-between text-xs text-outline font-label">
+              <span className="flex items-center gap-1.5">
+                <RotateCcw size={14} /> Click card to reveal answer
+              </span>
+              <span className="text-[11px] font-mono">FSRS Active</span>
             </div>
           </div>
 
-          {/* Back (Answer) */}
+          {/* Card Back */}
           <div
-            className="absolute inset-0 rounded-3xl flex flex-col p-8 md:p-12 items-center justify-center text-center bg-gradient-to-br from-amber-500 to-amber-600 border border-amber-400/30"
-            style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            className={`flex flex-col justify-between h-full rotate-y-180 backface-hidden ${
+              isFlipped ? 'flex' : 'hidden'
+            }`}
           >
-            <span className="absolute top-6 left-6 text-xs font-bold uppercase tracking-wider text-amber-900/60">Answer</span>
-            <p className="text-xl md:text-2xl font-medium text-[#0b1120] leading-relaxed overflow-y-auto max-h-full flex flex-col justify-center h-full">
-              {currentCard.back}
-            </p>
+            <div>
+              <span className="text-[10px] font-label font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+                Verified Conceptual Answer
+              </span>
+              <div className="mt-4 font-body text-sm sm:text-base text-on-surface leading-relaxed">
+                <Markdown>{currentCard.back}</Markdown>
+              </div>
+            </div>
+            <div className="pt-6 flex items-center justify-between text-xs text-outline font-label">
+              <span>Rate your recall certainty below</span>
+              <span className="text-[11px] font-mono">Space to flip</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Answer Controls */}
-      <div className={`flex items-center justify-center space-x-4 w-full transition-all duration-300 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleAnswer(false); }}
-          className="flex-1 max-w-[200px] flex justify-center items-center py-4 px-6 rounded-2xl glass-card text-red-400 font-bold text-lg border-2 border-transparent hover:border-red-500/30 hover:bg-red-500/10 hover:shadow-[0_0_20px_rgba(239,68,68,0.1)] transition-all duration-300 cursor-pointer"
-        >
-          <XIcon size={24} className="mr-2" strokeWidth={3} /> Not Yet
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleAnswer(true); }}
-          className="flex-1 max-w-[200px] flex justify-center items-center py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/20 transition-all duration-300 btn-press cursor-pointer"
-        >
-          <Check size={24} className="mr-2" strokeWidth={3} /> I Know This
-        </button>
-      </div>
+      {isFlipped ? (
+        <div className="flex gap-4 mt-6 w-full max-w-md animate-slide-up">
+          <button
+            onClick={() => handleResponse(false)}
+            className="flex-1 py-3 px-4 rounded-xl bg-error-container text-on-error-container font-label text-xs font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+          >
+            <XIcon size={16} /> Need Review (Again)
+          </button>
+          <button
+            onClick={() => handleResponse(true)}
+            className="flex-1 py-3 px-4 rounded-xl bg-primary text-on-primary font-label text-xs font-bold hover:bg-primary/95 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+          >
+            <Check size={16} /> Mastered (Good)
+          </button>
+        </div>
+      ) : (
+        <div className="mt-6 text-xs text-on-surface-variant font-label">
+          Click the card surface or press <kbd className="px-1.5 py-0.5 rounded bg-surface-container text-on-surface font-semibold">Space</kbd> to inspect solution
+        </div>
+      )}
     </div>
   );
 };

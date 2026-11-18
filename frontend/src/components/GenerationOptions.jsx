@@ -1,9 +1,11 @@
 import React from 'react';
 import { QUESTION_TYPES } from '../lib/generation';
 
-const selectClass = "w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-2.5 rounded-xl font-medium cursor-pointer text-sm";
-const inputClass = "w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-2.5 rounded-xl text-sm";
-const labelClass = "block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5";
+const selectClass =
+  'w-full bg-surface-container-low border border-outline-variant/40 text-on-surface p-2.5 rounded-xl font-label font-semibold cursor-pointer text-xs focus:outline-none focus:border-primary/60 focus:bg-surface-container-lowest transition-all';
+const inputClass =
+  'w-full bg-surface-container-low border border-outline-variant/40 text-on-surface p-2.5 rounded-xl text-xs font-body focus:outline-none focus:border-primary/60 focus:bg-surface-container-lowest transition-all';
+const labelClass = 'block text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant mb-1.5';
 
 /**
  * Options for AI generation: how many, which part of the document, difficulty,
@@ -19,74 +21,135 @@ const GenerationOptions = ({ kind, value, onChange, pageCount, allowPages = true
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-body">
       <div>
-        <label htmlFor={`${kind}-count`} className={labelClass}>{kind === 'quiz' ? 'Questions' : 'Cards'}</label>
-        <select id={`${kind}-count`} value={value.count} onChange={(e) => set({ count: Number(e.target.value) })} className={selectClass}>
-          {counts.map((n) => <option key={n} value={n}>{n}</option>)}
+        <label htmlFor={`${kind}-count`} className={labelClass}>
+          {kind === 'quiz' ? 'Question Count' : 'Flashcard Quantity'}
+        </label>
+        <select
+          id={`${kind}-count`}
+          value={value.count}
+          onChange={(e) => set({ count: Number(e.target.value) })}
+          className={selectClass}
+        >
+          {counts.map((n) => (
+            <option key={n} value={n}>
+              {n} {kind === 'quiz' ? 'Questions' : 'Cards'}
+            </option>
+          ))}
         </select>
       </div>
 
       <div>
-        <label htmlFor={`${kind}-scope`} className={labelClass}>From</label>
-        <select id={`${kind}-scope`} value={value.scope} onChange={(e) => set({ scope: e.target.value, to: value.to || pageCount || 1 })} className={selectClass}>
-          <option value="all">Whole document</option>
-          {allowPages && <option value="pages">Page range</option>}
-          <option value="topic">A topic</option>
+        <label htmlFor={`${kind}-scope`} className={labelClass}>
+          Ingestion Scope
+        </label>
+        <select
+          id={`${kind}-scope`}
+          value={value.scope}
+          onChange={(e) => set({ scope: e.target.value, to: value.to || pageCount || 1 })}
+          className={selectClass}
+        >
+          <option value="all">Whole Document</option>
+          {allowPages && <option value="pages">Specific Page Range</option>}
+          <option value="topic">Custom Topic / Concept</option>
         </select>
       </div>
 
       <div>
-        <label htmlFor={`${kind}-difficulty`} className={labelClass}>Difficulty</label>
-        <select id={`${kind}-difficulty`} value={value.difficulty} onChange={(e) => set({ difficulty: e.target.value })} className={selectClass}>
-          <option value="mixed">Mixed</option>
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
+        <label htmlFor={`${kind}-difficulty`} className={labelClass}>
+          Cognitive Difficulty
+        </label>
+        <select
+          id={`${kind}-difficulty`}
+          value={value.difficulty}
+          onChange={(e) => set({ difficulty: e.target.value })}
+          className={selectClass}
+        >
+          <option value="mixed">Balanced / Mixed</option>
+          <option value="easy">Easy (Core Definitions)</option>
+          <option value="medium">Medium (Analytical Proofs)</option>
+          <option value="hard">Hard (Multi-Step Derivations)</option>
         </select>
       </div>
 
       {value.scope === 'pages' && (
-        <div className="sm:col-span-3 flex items-end gap-3">
-          <div className="w-28">
-            <label htmlFor={`${kind}-from`} className={labelClass}>First page</label>
-            <input id={`${kind}-from`} type="number" min={1} max={pageCount || undefined} value={value.from} onChange={(e) => set({ from: e.target.value })} className={inputClass} />
+        <div className="sm:col-span-3 flex items-end gap-3 p-3 rounded-xl bg-surface-container border border-outline-variant/30">
+          <div className="flex-1">
+            <label htmlFor={`${kind}-from`} className={labelClass}>
+              From Page
+            </label>
+            <input
+              id={`${kind}-from`}
+              type="number"
+              min="1"
+              max={pageCount || 999}
+              value={value.from || 1}
+              onChange={(e) => set({ from: Number(e.target.value) })}
+              className={inputClass}
+            />
           </div>
-          <div className="w-28">
-            <label htmlFor={`${kind}-to`} className={labelClass}>Last page</label>
-            <input id={`${kind}-to`} type="number" min={1} max={pageCount || undefined} value={value.to} onChange={(e) => set({ to: e.target.value })} className={inputClass} />
+          <div className="flex-1">
+            <label htmlFor={`${kind}-to`} className={labelClass}>
+              To Page
+            </label>
+            <input
+              id={`${kind}-to`}
+              type="number"
+              min={value.from || 1}
+              max={pageCount || 999}
+              value={value.to || pageCount || 1}
+              onChange={(e) => set({ to: Number(e.target.value) })}
+              className={inputClass}
+            />
           </div>
-          {pageCount ? <span className="text-xs text-gray-400 pb-3">of {pageCount}</span> : null}
+          {pageCount && (
+            <span className="text-[11px] text-on-surface-variant pb-2 font-label">
+              Total {pageCount} pages available
+            </span>
+          )}
         </div>
       )}
 
       {value.scope === 'topic' && (
-        <div className="sm:col-span-3">
-          <label htmlFor={`${kind}-topic`} className={labelClass}>Topic</label>
-          <input id={`${kind}-topic`} type="text" maxLength={200} value={value.query} onChange={(e) => set({ query: e.target.value })} placeholder="e.g. Krebs cycle, normalization, Article 21" className={inputClass} />
+        <div className="sm:col-span-3 p-3 rounded-xl bg-surface-container border border-outline-variant/30">
+          <label htmlFor={`${kind}-topic`} className={labelClass}>
+            Topic / Key Concept to Extract
+          </label>
+          <input
+            id={`${kind}-topic`}
+            type="text"
+            value={value.topic || ''}
+            onChange={(e) => set({ topic: e.target.value })}
+            placeholder="e.g. Validation-Based Concurrency, Spectral Theorem, etc."
+            className={inputClass}
+          />
         </div>
       )}
 
       {kind === 'quiz' && (
-        <fieldset className="sm:col-span-3">
-          <legend className={labelClass}>Question types</legend>
+        <div className="sm:col-span-3 pt-2">
+          <label className={labelClass}>Question Typologies</label>
           <div className="flex flex-wrap gap-2">
             {QUESTION_TYPES.map((t) => {
-              const on = value.types.includes(t.id);
+              const active = value.types?.includes(t.id);
               return (
                 <button
                   key={t.id}
                   type="button"
-                  aria-pressed={on}
                   onClick={() => toggleType(t.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${on ? 'bg-amber-500/15 border-amber-500/50 text-amber-600 dark:text-amber-300' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-label font-semibold transition-all cursor-pointer ${
+                    active
+                      ? 'bg-primary text-on-primary shadow-xs'
+                      : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/30'
+                  }`}
                 >
                   {t.label}
                 </button>
               );
             })}
           </div>
-        </fieldset>
+        </div>
       )}
     </div>
   );

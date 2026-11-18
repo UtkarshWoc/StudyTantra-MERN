@@ -1,103 +1,111 @@
 import React, { useState } from 'react';
-import {
-  Heart,
-  Search,
-  FileText,
-  Star,
-  Loader2
-} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useDocuments, useDeleteDocument, useToggleDocumentFavorite } from '../api/hooks';
 import { formatBytes } from '../lib/format';
-import { useNavigate } from 'react-router-dom';
 import DocumentCard from '../components/DocumentCard';
 
 const Favorites = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const { data: allDocuments = [], isLoading: loading } = useDocuments();
-  const documents = allDocuments.filter(doc => doc.isFavorited);
+  const documents = allDocuments.filter((doc) => doc.isFavorited);
   const toggleFavorite = useToggleDocumentFavorite();
   const deleteDocument = useDeleteDocument();
 
   const handleToggleFavorite = (id) => toggleFavorite.mutate(id);
   const handleDelete = (id) => {
-    if (window.confirm("Delete this document and everything generated from it?")) deleteDocument.mutate(id);
+    if (window.confirm('Delete this document and everything generated from it?')) {
+      deleteDocument.mutate(id);
+    }
   };
 
-  const filteredItems = documents.filter(item => {
-    return item.title.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredItems = documents.filter((item) =>
+    item.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="flex-1 bg-gray-50/50 dark:bg-gray-900 min-h-screen pb-8 w-full block transition-colors">
-      <div className="max-w-6xl mx-auto flex flex-col items-start w-full">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full mb-8 gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-              <Star className="text-amber-400 fill-amber-400" size={28} />
-              Favorites
-            </h1>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Your saved study materials for quick access.</p>
+    <div className="py-6 space-y-8 max-w-6xl mx-auto">
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-4 border-b border-outline-variant/30">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="p-1.5 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]">star</span>
+            </span>
+            <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary">
+              Saved Documents
+            </span>
           </div>
-
-          <div className="relative w-full md:w-72">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-gray-400 dark:text-gray-500" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search favorites..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors shadow-sm outline-none text-sm"
-            />
-          </div>
+          <h1 className="font-headline text-3xl md:text-5xl font-bold text-on-surface tracking-tight">
+            Favorites
+          </h1>
+          <p className="font-body text-sm text-on-surface-variant max-w-2xl mt-1.5">
+            Quick-access list for your bookmarked documents and study materials.
+          </p>
         </div>
 
-        {/* Grid of Items */}
-        {loading ? (
-          <div className="w-full flex flex-col items-center justify-center py-24">
-            <Loader2 className="animate-spin text-gray-400 mb-4" size={48} />
-            <p className="text-gray-500">Loading your favorites...</p>
-          </div>
-        ) : filteredItems.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full animate-in fade-in duration-500">
-            {filteredItems.map(doc => (
-              <div key={doc._id} onClick={() => navigate(`/documents/${doc._id}`)} className="cursor-pointer transition-transform hover:-translate-y-1">
-                <DocumentCard
-                  title={doc.title}
-                  size={formatBytes(doc.sizeBytes)} document={doc}
-                  date={new Date(doc.createdAt).toLocaleDateString()}
-                  isFavorited={doc.isFavorited}
-                  onFavoriteToggle={() => handleToggleFavorite(doc._id)}
-                  onDelete={() => handleDelete(doc._id)}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="w-full flex flex-col items-center justify-center py-24 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 border-dashed transition-colors">
-            <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-4">
-              <Star className="text-amber-300 dark:text-amber-600/70" size={32} />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">No favorites found</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-center max-w-sm">
-              {searchQuery
-                ? `We couldn't find any favorites matching "${searchQuery}".`
-                : "You haven't saved any items to your favorites yet. Go to your Library and click the star icon to save documents here!"}
-            </p>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="cursor-pointer mt-6 px-5 py-2 bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-100 dark:hover:bg-amber-800/50 transition-colors"
-              >
-                Clear search
-              </button>
-            )}
-          </div>
-        )}
+        {/* Search input */}
+        <div className="relative w-full md:w-80">
+          <span className="material-symbols-outlined text-[18px] text-outline absolute left-3.5 top-3 pointer-events-none">
+            search
+          </span>
+          <input
+            type="text"
+            placeholder="Search favorites..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all"
+          />
+        </div>
       </div>
+
+      {/* Grid of Favorite Document Cards */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 text-on-surface-variant">
+          <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-3">progress_activity</span>
+          <p className="font-label text-xs uppercase tracking-widest">Loading bookmarks...</p>
+        </div>
+      ) : filteredItems.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredItems.map((doc) => (
+            <div
+              key={doc._id}
+              onClick={() => navigate(`/documents/${doc._id}`)}
+              className="cursor-pointer transition-transform hover:-translate-y-1"
+            >
+              <DocumentCard
+                title={doc.title}
+                size={formatBytes(doc.sizeBytes)}
+                document={doc}
+                date={new Date(doc.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                isFavorited={doc.isFavorited}
+                onFavoriteToggle={() => handleToggleFavorite(doc._id)}
+                onDelete={() => handleDelete(doc._id)}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20 bg-surface-container-lowest border border-dashed border-outline-variant/40 rounded-3xl p-8">
+          <div className="w-16 h-16 rounded-2xl bg-primary-fixed text-primary mx-auto flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-3xl">star_border</span>
+          </div>
+          <h3 className="font-headline text-2xl font-bold text-on-surface mb-2">No Favorites Yet</h3>
+          <p className="text-sm text-on-surface-variant max-w-sm mx-auto mb-6">
+            {searchQuery
+              ? `No favorites matching "${searchQuery}".`
+              : 'Star important documents in your Library to quickly access them here.'}
+          </p>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-surface-container hover:bg-surface-container-high text-xs font-label font-bold text-on-surface rounded-xl transition-colors cursor-pointer"
+            >
+              <span>Clear Filter</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

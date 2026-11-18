@@ -9,6 +9,8 @@ import { logger } from '../../config/logger.js';
 
 // Below this many extracted characters per page we assume a scanned PDF and OCR it.
 const MIN_CHARS_PER_PAGE = 40;
+// Maximum chunks to embed per document to stay within free-tier API quotas and keep latency fast.
+const MAX_INDEXED_CHUNKS = 60;
 
 const setProgress = (doc, progress, extra = {}) =>
   Document.updateOne({ _id: doc._id }, { progress, ...extra });
@@ -17,16 +19,17 @@ const setProgress = (doc, progress, extra = {}) =>
  * Extract → (OCR fallback) → store pages → chunk → embed → store chunks.
  * Idempotent: re-running replaces previous pages/chunks for the document.
  */
-export const ingestDocument = async (documentId) => {
+export const ingestDocument = async (documentId, initialBuffer = null) => {
   const doc = await Document.findById(documentId);
   if (!doc) return;
 
   try {
     await setProgress(doc, 5, { status: 'processing', processingError: null });
-    const buffer = await readFile(doc);
+    // Use the in-memory buffer if passed directly; otherwise read from storage.
+    const buffer = initialBuffer || (await readFile(doc));
 
     let { pageCount, pages } = await extractPdfPages(buffer);
-    const textChars = pages.reduce((n, p) => n + p.text.length, 0);
+    const textChars = pages.reduce((n, p) => n + (p.text?.trim()?.length || 0), 0);
     let ocr = false;
 
     if (textChars < MIN_CHARS_PER_PAGE * Math.max(1, pageCount)) {
@@ -52,7 +55,9 @@ export const ingestDocument = async (documentId) => {
     await DocumentPage.deleteMany({ document: doc._id });
     await DocumentPage.insertMany(pages.map((p) => ({ document: doc._id, page: p.page, text: p.text })));
 
-    const chunks = chunkPages(pages);
+    const rawChunks = chunkPages(pages);
+    // Cap chunks to ensure fast completion under Gemini quotas
+    const chunks = rawChunks.length > MAX_INDEXED_CHUNKS ? rawChunks.slice(0, MAX_INDEXED_CHUNKS) : rawChunks;
     await setProgress(doc, 50);
 
     const embeddings = chunks.length ? await embedTexts(chunks.map((c) => c.text), { taskType: 'RETRIEVAL_DOCUMENT' }) : [];

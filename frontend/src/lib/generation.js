@@ -21,9 +21,10 @@ export const defaultOptions = (kind) => ({
  * Convert the form state into the API request body.
  */
 export const toRequestBody = (options, kind) => {
+  const topicQuery = (options.query || options.topic || '').trim();
   const scope =
     options.scope === 'pages' ? { type: 'pages', from: Number(options.from) || 1, to: Number(options.to) || 1 }
-      : options.scope === 'topic' ? { type: 'topic', query: options.query.trim() }
+      : options.scope === 'topic' ? { type: 'topic', query: topicQuery }
         : { type: 'all' };
   return {
     count: options.count,

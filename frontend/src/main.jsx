@@ -26,7 +26,20 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Sentry.ErrorBoundary fallback={<p style={{ padding: 32, color: '#f1f5f9' }}>Something went wrong. Please reload the page.</p>}>
+    <Sentry.ErrorBoundary
+      fallback={({ error }) => (
+        <div style={{ padding: 32, color: '#f1f5f9', fontFamily: 'monospace' }}>
+          <p style={{ fontWeight: 'bold', fontSize: '18px', color: '#ef4444', marginBottom: '8px' }}>
+            Something went wrong: {error?.message || 'Please reload the page.'}
+          </p>
+          {error?.stack && (
+            <pre style={{ marginTop: '12px', background: '#18120c', border: '1px solid #c2652a', padding: '16px', borderRadius: '12px', overflowX: 'auto', fontSize: '12px', color: '#f5d0b5' }}>
+              {error.stack}
+            </pre>
+          )}
+        </div>
+      )}
+    >
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>

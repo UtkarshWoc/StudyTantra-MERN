@@ -3,28 +3,48 @@ import { Link } from 'react-router-dom';
 import FlashcardViewer from '../components/FlashcardViewer';
 import GenerationOptions from '../components/GenerationOptions';
 import DocumentStatus from '../components/DocumentStatus';
-import { Layers, Loader2, Zap, Trash2, List, Brain, Download } from 'lucide-react';
-import { useDocuments, useFlashcards, useGenerateFlashcards, useDeleteFlashcard, useSubmitReview } from '../api/hooks';
+import { Layers, List, Brain, Download, Trash2, ArrowRight } from 'lucide-react';
+import {
+  useDocuments,
+  useFlashcards,
+  useGenerateFlashcards,
+  useDeleteFlashcard,
+  useSubmitReview,
+} from '../api/hooks';
 import { getErrorMessage } from '../lib/api';
 import { defaultOptions, toRequestBody } from '../lib/generation';
 import { downloadFromApi } from '../lib/download';
 
-const toViewerCard = (card) => ({ id: card._id, front: card.question, back: card.answer, topic: card.topic || 'General' });
+const toViewerCard = (card) => ({
+  id: card?._id,
+  front: card?.question || '',
+  back: card?.answer || '',
+  topic: card?.topic || 'General',
+});
 
 const DeckList = ({ cards, onDelete }) => (
-  <ul className="divide-y divide-white/[0.04] glass-card rounded-2xl">
-    {cards.map((card) => (
-      <li key={card._id} className="flex items-start gap-4 p-4 hover:bg-white/[0.02] transition-colors">
+  <ul className="divide-y divide-outline-variant/20 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs font-body">
+    {(Array.isArray(cards) ? cards : []).map((card) => (
+      <li
+        key={card._id}
+        className="flex items-start gap-4 p-5 hover:bg-surface-container-low transition-colors group"
+      >
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-slate-100">{card.question}</p>
-          <p className="text-sm text-slate-400 mt-1">{card.answer}</p>
-          <span className="inline-block mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-400">{card.topic}</span>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-label font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary-fixed text-primary">
+              {card.topic}
+            </span>
+          </div>
+          <p className="font-headline text-base sm:text-lg font-bold text-on-surface leading-snug">
+            {card.question}
+          </p>
+          <p className="text-xs text-on-surface-variant mt-2 leading-relaxed">{card.answer}</p>
         </div>
         <button
           type="button"
           onClick={() => window.confirm('Delete this flashcard?') && onDelete(card._id)}
           aria-label="Delete flashcard"
-          className="p-2 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+          className="p-2 rounded-lg text-outline hover:text-error hover:bg-error-container/20 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
         >
           <Trash2 size={16} />
         </button>
@@ -45,121 +65,225 @@ const Flashcards = () => {
   const [view, setView] = useState('study');
 
   const { data: cards, isLoading: loadingCards } = useFlashcards(selectedDocId);
-  const flashcards = cards ? cards.map(toViewerCard) : null;
+  const flashcards = Array.isArray(cards) ? cards.map(toViewerCard) : null;
   const deleteCard = useDeleteFlashcard(selectedDocId);
   const submitReview = useSubmitReview();
 
   const generate = useGenerateFlashcards(selectedDocId);
   const generating = generate.isPending;
   const error = generate.error ? getErrorMessage(generate.error, 'Error generating flashcards') : '';
+
   const generateFlashcards = () => {
     if (!selectedDocId) return;
-    generate.mutate({ ...toRequestBody(options, 'flashcards'), replace }, { onSuccess: () => setReplace(false) });
+    generate.mutate(
+      { ...toRequestBody(options, 'flashcards'), replace },
+      { onSuccess: () => setReplace(false) }
+    );
   };
 
   if (loadingDocs) {
     return (
-      <div className="flex flex-col flex-1 h-96 items-center justify-center text-slate-500">
-        <Loader2 className="animate-spin mb-3" size={40} />
-        <p>Loading your documents...</p>
+      <div className="flex flex-col items-center justify-center py-24 text-on-surface-variant gap-3">
+        <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+        <p className="font-label text-xs uppercase tracking-widest">Opening Flashcard Vault...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto py-6 animate-fade-in">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center p-4 bg-amber-500/10 rounded-2xl text-amber-400 mb-5 shadow-lg shadow-amber-500/10">
-          <Layers size={36} />
+    <div className="py-6 space-y-8 max-w-5xl mx-auto font-body">
+      {/* Header Banner */}
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 md:p-8 shadow-[0_2px_16px_rgba(58,48,42,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="p-1 rounded-md bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[16px]">style</span>
+            </span>
+            <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary">
+              Spaced Recall Vault
+            </span>
+          </div>
+          <h1 className="font-headline text-3xl md:text-4xl font-bold text-on-surface tracking-tight">
+            Flashcards Vault
+          </h1>
+          <p className="font-body text-xs md:text-sm text-on-surface-variant mt-1">
+            Generate and practice active recall cards from documents, whole chapters, or specific topics.
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">Flashcards</h1>
-        <p className="text-slate-400 max-w-lg mx-auto font-medium leading-relaxed">Generate cards from a whole document, a page range, or a single topic, then study them.</p>
+
+        {selectedDocId && (
+          <Link
+            to={`/review?document=${selectedDocId}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary text-xs font-label font-bold shadow-sm transition-all shrink-0"
+          >
+            <span>Review Active Cards</span>
+            <ArrowRight size={15} />
+          </Link>
+        )}
       </div>
 
-      <div className="glass-card p-6 rounded-2xl space-y-5">
+      {/* Generation & Deck Selector Panel */}
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 md:p-8 shadow-[0_2px_16px_rgba(58,48,42,0.04)] space-y-6">
         {documents.length === 0 ? (
-          <p className="text-slate-400">Please upload a document in Your Library first.</p>
+          <div className="text-center py-6">
+            <p className="text-xs text-on-surface-variant mb-3">No documents uploaded yet.</p>
+            <Link
+              to="/documents"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-label font-bold"
+            >
+              Upload Document First
+            </Link>
+          </div>
         ) : (
           <>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label htmlFor="flashcard-doc" className="block text-sm font-bold text-slate-300">Document</label>
+                <label
+                  htmlFor="flashcard-doc"
+                  className="block text-xs font-label font-bold uppercase tracking-wider text-on-surface"
+                >
+                  Source Document
+                </label>
                 <DocumentStatus document={selectedDoc} />
               </div>
               <select
                 id="flashcard-doc"
                 value={selectedDocId}
                 onChange={(e) => setPickedDocId(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.08] text-slate-200 p-3 rounded-xl font-medium cursor-pointer focus:outline-none focus:border-amber-500/40 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 text-on-surface p-3 rounded-xl font-body text-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all"
               >
-                {documents.map(doc => <option key={doc._id} value={doc._id}>{doc.title}</option>)}
+                {documents.map((doc) => (
+                  <option key={doc._id} value={doc._id}>
+                    {doc.title}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <GenerationOptions kind="flashcards" value={options} onChange={setOptions} pageCount={selectedDoc?.pageCount} />
+            <GenerationOptions
+              kind="flashcards"
+              value={options}
+              onChange={setOptions}
+              pageCount={selectedDoc?.pageCount}
+            />
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
-                <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} className="accent-amber-500" />
-                Replace the existing deck
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-outline-variant/20">
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-on-surface-variant cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={replace}
+                  onChange={(e) => setReplace(e.target.checked)}
+                  className="accent-primary w-4 h-4 rounded"
+                />
+                <span>Replace existing deck for this document</span>
               </label>
+
               <button
                 onClick={generateFlashcards}
                 disabled={generating || loadingCards || !ready}
-                className="h-12 px-6 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#0b1120] font-bold rounded-xl shadow-lg shadow-amber-900/20 btn-press flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label text-xs font-bold shadow-md hover:shadow-lg transition-all duration-150 transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                type="button"
               >
-                {generating ? <><Loader2 className="animate-spin mr-2" size={18} /> Generating...</> : <><Zap size={18} className="mr-2" /> {replace || !cards?.length ? 'Generate Deck' : 'Add Cards'}</>}
+                {generating ? (
+                  <>
+                    <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                    <span>Generating Cards...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                    <span>{replace || !cards?.length ? 'Generate Deck' : 'Add More Cards'}</span>
+                  </>
+                )}
               </button>
             </div>
           </>
         )}
-        {error && <p className="text-red-400 text-sm font-medium animate-scale-in">{error}</p>}
+
+        {error && <p className="text-xs text-error font-medium">{error}</p>}
       </div>
 
+      {/* Deck Viewer & Practice Section */}
       <div className="min-h-[400px]">
         {loadingCards ? (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-            <Loader2 className="animate-spin mb-3" size={32} />
-            <p>Loading flashcard deck...</p>
+          <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant">
+            <span className="material-symbols-outlined text-3xl text-primary animate-spin mb-3">progress_activity</span>
+            <p className="text-xs font-label uppercase tracking-widest">Loading flashcard deck...</p>
           </div>
         ) : flashcards && flashcards.length > 0 ? (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Link to={`/review?document=${selectedDocId}`} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-[#0b1120] text-sm font-bold btn-press">
-                  <Brain size={16} /> Review with spaced repetition
+                <Link
+                  to={`/review?document=${selectedDocId}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-label font-bold shadow-sm"
+                >
+                  <Brain size={15} />
+                  <span>Review Spaced Intervals</span>
                 </Link>
+
                 {[{ format: 'csv', label: 'CSV' }, { format: 'anki', label: 'Anki' }].map((x) => (
                   <button
                     key={x.format}
                     type="button"
-                    onClick={() => downloadFromApi(`/flashcards/export/${selectedDocId}?format=${x.format}`, `flashcards.${x.format === 'csv' ? 'csv' : 'txt'}`).catch(() => window.alert('Export failed. Please try again.'))}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl glass-card text-sm font-semibold text-slate-300 hover:text-amber-300 hover:border-amber-500/30 transition-all cursor-pointer"
+                    onClick={() =>
+                      downloadFromApi(
+                        `/flashcards/export/${selectedDocId}?format=${x.format}`,
+                        `flashcards.${x.format === 'csv' ? 'csv' : 'txt'}`
+                      ).catch(() => window.alert('Export failed. Please try again.'))
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 text-xs font-label font-medium text-on-surface transition-colors cursor-pointer"
                   >
-                    <Download size={14} /> {x.label}
+                    <Download size={14} />
+                    <span>{x.label}</span>
                   </button>
                 ))}
               </div>
-              <div className="flex justify-end gap-1" role="tablist">
-                {[{ id: 'study', label: 'Practice all', icon: Layers }, { id: 'list', label: `All cards (${cards.length})`, icon: List }].map(t => (
-                  <button key={t.id} role="tab" aria-selected={view === t.id} onClick={() => setView(t.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold cursor-pointer transition-all ${view === t.id ? 'bg-amber-500/10 text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <t.icon size={15} /> {t.label}
+
+              {/* View Switcher: Practice All vs All Cards */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-container-low border border-outline-variant/30" role="tablist">
+                {[
+                  { id: 'study', label: 'Practice Deck', icon: Layers },
+                  { id: 'list', label: `All Cards (${Array.isArray(cards) ? cards.length : 0})`, icon: List },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={view === t.id}
+                    onClick={() => setView(t.id)}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-label font-bold transition-all cursor-pointer ${
+                      view === t.id
+                        ? 'bg-primary text-on-primary shadow-xs'
+                        : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    <t.icon size={14} />
+                    <span>{t.label}</span>
                   </button>
                 ))}
               </div>
             </div>
-            {view === 'study'
-              ? <FlashcardViewer key={`${selectedDocId}-${cards.length}`} cards={flashcards} onCardReviewed={(id, rating) => submitReview.mutate({ id, rating })} />
-              : <DeckList cards={cards} onDelete={(id) => deleteCard.mutate(id)} />}
-          </>
+
+            {view === 'study' ? (
+              <FlashcardViewer
+                key={`${selectedDocId}-${Array.isArray(cards) ? cards.length : 0}`}
+                cards={flashcards}
+                onCardReviewed={(id, rating) => submitReview.mutate({ id, rating })}
+              />
+            ) : (
+              <DeckList cards={Array.isArray(cards) ? cards : []} onDelete={(id) => deleteCard.mutate(id)} />
+            )}
+          </div>
         ) : selectedDocId && !generating && flashcards !== null ? (
-          <div className="glass-card rounded-2xl p-10 text-center mx-auto flex flex-col items-center animate-slide-up">
-            <div className="bg-amber-500/10 p-6 rounded-full text-amber-400 mb-6">
-              <Layers size={48} />
+          <div className="text-center py-20 bg-surface-container-lowest border border-dashed border-outline-variant/40 rounded-3xl p-8">
+            <div className="w-16 h-16 rounded-2xl bg-primary-fixed text-primary mx-auto flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-3xl">style</span>
             </div>
-            <h3 className="text-2xl font-bold mb-2 text-white">No flashcards yet</h3>
-            <p className="text-slate-400 mb-6 max-w-sm">
-              {ready ? 'Choose your options above and generate a deck. You can also select text in a document and turn it into a card.' : 'This document is still being processed. You can generate cards once it is ready.'}
+            <h3 className="font-headline text-2xl font-bold text-on-surface mb-2">No Flashcards Generated Yet</h3>
+            <p className="text-xs text-on-surface-variant max-w-sm mx-auto mb-6">
+              {ready
+                ? 'Select generation options above to synthesize cards from this document.'
+                : 'This document is still processing. Flashcards will become available once ready.'}
             </p>
           </div>
         ) : null}

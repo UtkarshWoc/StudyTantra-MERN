@@ -1,13 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Folder, Layers, Sparkles, Target, Loader2, FileText, Flame, Brain, AlertTriangle, CalendarCheck, MessageSquare, Upload, Zap, ArrowRight, TrendingUp } from 'lucide-react';
+import {
+  Folder,
+  Layers,
+  Sparkles,
+  Target,
+  FileText,
+  Brain,
+  Upload,
+  Zap,
+  MessageSquare,
+  ArrowRight,
+  TrendingUp,
+} from 'lucide-react';
 import { useDashboard, useInsights, useTogglePlanTask } from '../api/hooks';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import GoalMeter from '../components/GoalMeter';
 import { timeAgo } from '../lib/time';
 import { taskLink } from '../lib/tasks';
-
-const card = 'glass-card rounded-2xl p-5';
 
 const ACTIVITY = {
   review: { icon: Brain, text: (a) => `Reviewed a card${a.meta?.topic ? ` on ${a.meta.topic}` : ''}` },
@@ -19,27 +29,49 @@ const ACTIVITY = {
 
 const TodaysPlan = ({ plan }) => {
   const toggle = useTogglePlanTask(plan?.planId);
+
   if (!plan) {
     return (
-      <p className="text-sm text-slate-400">
-        Have an exam coming up? <Link to="/planner" className="font-semibold text-amber-400 hover:text-amber-300 link-underline">Create a study plan</Link> and your daily tasks show up here.
-      </p>
+      <div className="p-4 rounded-2xl bg-surface-container-low text-xs text-on-surface-variant font-body">
+        Have an exam coming up?{' '}
+        <Link to="/planner" className="font-semibold text-primary hover:underline">
+          Create a study plan
+        </Link>{' '}
+        and your scheduled milestones will appear here.
+      </div>
     );
   }
-  if (!plan.tasks.length) return <p className="text-sm text-slate-400">No tasks today for <span className="font-semibold text-slate-200">{plan.title}</span>. Enjoy the break!</p>;
+
+  if (!plan.tasks || !plan.tasks.length) {
+    return (
+      <div className="p-4 rounded-2xl bg-surface-container-low text-xs text-on-surface-variant">
+        No pending tasks today for <strong className="text-on-surface">{plan.title}</strong>. Enjoy the break!
+      </div>
+    );
+  }
+
   return (
     <ul className="space-y-2">
       {plan.tasks.map((task) => (
-        <li key={task._id} className="flex items-start gap-3 group">
+        <li
+          key={task._id}
+          className="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors group"
+        >
           <input
             type="checkbox"
             checked={task.done}
             onChange={(e) => toggle.mutate({ taskId: task._id, done: e.target.checked })}
             aria-label={`Mark "${task.title}" done`}
-            className="mt-1 accent-amber-500 w-4 h-4 cursor-pointer"
+            className="mt-0.5 accent-primary w-4 h-4 rounded cursor-pointer"
           />
-          <Link to={taskLink(task)} className={`flex-1 text-sm transition-colors duration-200 ${task.done ? 'line-through text-slate-600' : 'text-slate-300 hover:text-amber-300'}`}>
-            {task.title} <span className="text-xs text-slate-600">· {task.minutes} min</span>
+          <Link
+            to={taskLink(task)}
+            className={`flex-1 text-xs font-body transition-colors leading-relaxed ${
+              task.done ? 'line-through text-outline' : 'text-on-surface hover:text-primary font-medium'
+            }`}
+          >
+            <span>{task.title}</span>{' '}
+            <span className="text-[11px] text-on-surface-variant">· {task.minutes} min</span>
           </Link>
         </li>
       ))}
@@ -47,19 +79,19 @@ const TodaysPlan = ({ plan }) => {
   );
 };
 
-const StatCard = ({ label, value, icon, delay }) => {
+const StatCard = ({ label, value, icon }) => {
   const Icon = icon;
   return (
-    <div className="glass-card glass-card-hover rounded-2xl p-4 group" style={{ animationDelay: `${delay}ms` }}>
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/15 group-hover:shadow-lg group-hover:shadow-amber-500/10 transition-all duration-300">
-          <Icon size={18} strokeWidth={1.8} />
-        </div>
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{label}</p>
-          <p className="text-xl font-extrabold text-white animate-fade-in">{value}</p>
+    <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm flex flex-col justify-between">
+      <div className="flex items-start justify-between">
+        <span className="text-[10px] uppercase tracking-wider font-label font-bold text-on-surface-variant">
+          {label}
+        </span>
+        <div className="p-2 rounded-xl bg-primary-fixed text-primary flex items-center justify-center">
+          <Icon size={18} />
         </div>
       </div>
+      <p className="font-headline text-3xl font-bold text-on-surface mt-3">{value}</p>
     </div>
   );
 };
@@ -68,85 +100,167 @@ const Dashboard = () => {
   const { data: library } = useDashboard();
   const { data: insights, isLoading, isError } = useInsights();
 
-  if (isLoading) return (
-    <div className="flex flex-col items-center justify-center py-16 text-slate-500">
-      <Loader2 className="animate-spin mb-4 text-amber-500" size={36} />
-      <p className="font-medium">Loading overview...</p>
-    </div>
-  );
-  if (isError) return (<div className="text-center py-16 text-slate-400">Could not load your dashboard. Please refresh.</div>);
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-on-surface-variant">
+        <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-3">progress_activity</span>
+        <p className="font-label text-xs uppercase tracking-widest">Loading Overview...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-16 text-on-surface-variant bg-surface-container-lowest border border-outline-variant/30 rounded-3xl max-w-lg mx-auto">
+        <span className="material-symbols-outlined text-4xl text-outline mb-2">error</span>
+        <p className="text-sm font-medium">Could not load dashboard data. Please refresh.</p>
+      </div>
+    );
+  }
 
   const metrics = library?.metrics || {};
-  const dueTotal = insights.due.reviews + insights.due.new;
+  const dueTotal = (insights?.due?.reviews || 0) + (insights?.due?.new || 0);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Hero: what to do right now */}
-      <section className={`${card} gradient-border flex flex-col md:flex-row md:items-center gap-6 relative overflow-hidden`}>
-        {/* Subtle glow behind the number */}
-        <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-amber-500/[0.08] blur-[60px] pointer-events-none" />
-        <div className="flex-1 relative">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1">Ready to review</p>
-          <p className="text-5xl font-extrabold text-white leading-none">{dueTotal}</p>
-          <p className="text-sm text-slate-400 mt-2">{insights.due.reviews} due · {insights.due.new} new cards</p>
+    <div className="py-6 space-y-8 max-w-6xl mx-auto">
+      {/* Ready To Review Hero Banner */}
+      <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 sm:p-8 md:p-10 shadow-[0_2px_16px_rgba(58,48,42,0.04)] relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="relative z-10 flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="p-1 rounded-md bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[16px]">schedule</span>
+            </span>
+            <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary">
+              Ready To Review
+            </span>
+          </div>
+
+          <div className="flex items-baseline gap-3">
+            <span className="font-headline text-5xl sm:text-6xl font-bold text-on-surface leading-none">
+              {dueTotal}
+            </span>
+            <span className="text-sm font-label text-on-surface-variant">
+              {dueTotal === 1 ? 'card waiting' : 'cards waiting'}
+            </span>
+          </div>
+
+          <p className="text-xs text-on-surface-variant mt-2 font-medium">
+            {insights?.due?.reviews || 0} due for spaced repetition · {insights?.due?.new || 0} new cards
+          </p>
         </div>
-        <Link
-          to="/review"
-          className={`group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-extrabold transition-all duration-300 btn-press ${
-            dueTotal
-              ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-[#0b1120] shadow-lg shadow-amber-900/20 hover:shadow-amber-500/20'
-              : 'bg-white/[0.06] text-slate-400 border border-white/[0.08]'
-          }`}
-        >
-          <Brain size={18} /> {dueTotal ? 'Start review' : 'All caught up'}
-          {dueTotal > 0 && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
-        </Link>
+
+        <div className="relative z-10 shrink-0">
+          <Link
+            to="/review"
+            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label text-xs font-bold shadow-md hover:shadow-lg transition-all duration-150 transform active:scale-95 cursor-pointer"
+          >
+            <span>{dueTotal > 0 ? 'Start Daily Review' : 'Review Flashcards'}</span>
+            <ArrowRight size={16} />
+          </Link>
+        </div>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
-        <section className={card} aria-label="Study streak">
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl transition-all duration-300 ${insights.streak.studiedToday ? 'bg-amber-500/15 text-amber-400 shadow-lg shadow-amber-500/10' : 'bg-white/[0.06] text-slate-500'}`}>
-              <Flame size={22} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Streak</p>
-              <p className="text-2xl font-extrabold text-white">{insights.streak.current} day{insights.streak.current === 1 ? '' : 's'}</p>
-            </div>
+      {/* Habit Telemetry Row: Streak & Daily Goal */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Streak Card */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-label font-bold uppercase tracking-wider text-on-surface-variant">
+              Daily Habit Streak
+            </span>
+            <span className="p-1.5 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]">local_fire_department</span>
+            </span>
           </div>
-          <p className="text-xs text-slate-500 mt-3">
-            {insights.streak.studiedToday ? <span className="text-amber-400">🔥 Studied today. Nice!</span> : insights.streak.current ? 'Review or take a quiz today to keep it going.' : 'Review a card today to start a streak.'}
-            {' '}Longest: {insights.streak.longest}.
+
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline text-3xl font-bold text-on-surface">
+              {insights?.streak?.current || 0}
+            </span>
+            <span className="text-xs font-label text-on-surface-variant">
+              {insights?.streak?.current === 1 ? 'day' : 'days'}
+            </span>
+          </div>
+
+          <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
+            {insights?.streak?.studiedToday ? (
+              <span className="text-primary font-semibold">🔥 Studied today. Nice work!</span>
+            ) : insights?.streak?.current ? (
+              'Review or complete a quiz today to extend your streak.'
+            ) : (
+              'Review a card today to ignite a study streak.'
+            )}{' '}
+            <span className="text-outline">Longest: {insights?.streak?.longest || 0} days.</span>
           </p>
         </section>
 
-        <section className={card} aria-label="Daily goal">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Today's goal</p>
-          <GoalMeter done={insights.goal.done} target={insights.goal.target} />
-          <p className="text-xs text-slate-500 mt-3">Change your daily goal in <Link to="/settings" className="text-amber-400 link-underline">Settings</Link>.</p>
+        {/* Daily Goal Card */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col justify-between" aria-label="Daily goal">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-label font-bold uppercase tracking-wider text-on-surface-variant">
+              Today's Goal
+            </span>
+            <span className="p-1.5 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]">flag</span>
+            </span>
+          </div>
+
+          <div className="my-2">
+            <GoalMeter done={insights?.goal?.done || 0} target={insights?.goal?.target || 20} />
+          </div>
+
+          <p className="text-xs text-on-surface-variant mt-2">
+            Adjust target review volume in{' '}
+            <Link to="/settings" className="text-primary font-semibold hover:underline">
+              Settings
+            </Link>
+            .
+          </p>
         </section>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
-        <section className={card}>
-          <h3 className="flex items-center gap-2 text-base font-extrabold text-slate-100 mb-4"><CalendarCheck size={18} className="text-amber-400" /> Today's plan</h3>
-          <TodaysPlan plan={insights.todaysPlan} />
+      {/* 2-Column Split: Today's Plan & Weak Topics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Today's Plan */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
+            <span className="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+            <h3 className="font-headline text-lg font-bold text-on-surface">Today's Study Plan</h3>
+          </div>
+          <TodaysPlan plan={insights?.todaysPlan} />
         </section>
 
-        <section className={card}>
-          <h3 className="flex items-center gap-2 text-base font-extrabold text-slate-100 mb-4"><AlertTriangle size={18} className="text-amber-400" /> Weak topics</h3>
-          {insights.weakTopics.length === 0 ? (
-            <p className="text-sm text-slate-400">No weak spots yet. Take quizzes and review cards; topics you keep missing show up here.</p>
+        {/* Weak Topics */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
+            <span className="material-symbols-outlined text-tertiary text-[20px]">warning</span>
+            <h3 className="font-headline text-lg font-bold text-on-surface">Weak Topics</h3>
+          </div>
+
+          {!insights?.weakTopics || insights.weakTopics.length === 0 ? (
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              No weak areas detected yet. As you take quizzes and review cards, topics you find challenging will appear here for targeted practice.
+            </p>
           ) : (
             <ul className="space-y-2">
-              {insights.weakTopics.map((t) => (
-                <li key={`${t.document}-${t.topic}`} className="flex items-center gap-3 group">
+              {insights.weakTopics.slice(0, 5).map((t) => (
+                <li
+                  key={`${t.document}-${t.topic}`}
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors group"
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-200 truncate">{t.topic}</p>
-                    <p className="text-xs text-slate-500 truncate">{t.documentTitle || 'Deleted document'} · {t.accuracy}% of {t.total}</p>
+                    <p className="text-xs font-semibold text-on-surface truncate">{t.topic}</p>
+                    <p className="text-[11px] text-on-surface-variant truncate">
+                      {t.documentTitle || 'Source document'} · {t.accuracy}% accuracy ({t.total} attempts)
+                    </p>
                   </div>
-                  {t.documentTitle && (
-                    <Link to={`/quizzes?document=${t.document}&topic=${encodeURIComponent(t.topic)}`} className="text-xs font-bold text-amber-400 hover:text-amber-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">Practice →</Link>
+                  {t.document && (
+                    <Link
+                      to={`/quizzes?document=${t.document}&topic=${encodeURIComponent(t.topic)}`}
+                      className="text-xs font-label font-bold text-primary hover:underline whitespace-nowrap shrink-0"
+                    >
+                      Practice →
+                    </Link>
                   )}
                 </li>
               ))}
@@ -155,44 +269,73 @@ const Dashboard = () => {
         </section>
       </div>
 
-      <section className={card}>
-        <h3 className="text-base font-extrabold text-slate-100 mb-4 flex items-center gap-2"><TrendingUp size={18} className="text-amber-400" /> Activity</h3>
-        <ActivityHeatmap days={insights.heatmap} />
-      </section>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-children">
-        {[
-          { label: 'Documents', value: metrics.totalDocuments ?? 0, icon: Folder },
-          { label: 'Flashcards', value: metrics.totalFlashcards ?? 0, icon: Layers },
-          { label: 'Quizzes', value: metrics.totalQuizzes ?? 0, icon: Target },
-          { label: 'Avg score', value: `${metrics.averageScore ?? 0}%`, icon: Sparkles },
-        ].map((m, i) => (
-          <StatCard key={m.label} {...m} delay={i * 100} />
-        ))}
+      {/* 4 Metric Bento Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard label="Documents" value={metrics.totalDocuments ?? 0} icon={Folder} />
+        <StatCard label="Flashcards" value={metrics.totalFlashcards ?? 0} icon={Layers} />
+        <StatCard label="Quizzes" value={metrics.totalQuizzes ?? 0} icon={Target} />
+        <StatCard label="Avg Score" value={`${metrics.averageScore ?? 0}%`} icon={Sparkles} />
       </div>
 
-      <section className={card}>
-        <h3 className="text-base font-extrabold text-slate-100 mb-4">Recent activity</h3>
-        {insights.recentActivity.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-sm">No activity yet. <Link to="/documents" className="text-amber-400 link-underline">Upload a document</Link> to start.</div>
-        ) : (
-          <ul className="divide-y divide-white/[0.04]">
-            {insights.recentActivity.map((a) => {
-              const kind = ACTIVITY[a.type] || { icon: FileText, text: () => a.type };
-              return (
-                <li key={a._id} className="py-3 flex items-center gap-3 group hover:bg-white/[0.02] -mx-2 px-2 rounded-lg transition-colors duration-200">
-                  <div className="p-2 rounded-lg bg-white/[0.04] text-slate-400 group-hover:text-amber-400 group-hover:bg-amber-500/10 transition-all duration-200"><kind.icon size={15} /></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-300 truncate">{kind.text(a)}</p>
-                    {a.documentTitle && <Link to={`/documents/${a.document}`} className="text-xs text-slate-500 hover:text-amber-400 truncate block transition-colors">{a.documentTitle}</Link>}
-                  </div>
-                  <span className="text-xs text-slate-600 whitespace-nowrap">{timeAgo(a.createdAt)}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      {/* Annual Activity Heatmap & Recent Activity Log */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Heatmap (8 Cols) */}
+        <section className="lg:col-span-8 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[20px]">trending_up</span>
+              <h3 className="font-headline text-lg font-bold text-on-surface">Study Activity</h3>
+            </div>
+            <span className="text-[11px] font-label text-on-surface-variant">Annual History</span>
+          </div>
+          <ActivityHeatmap days={insights?.heatmap} />
+        </section>
+
+        {/* Recent Activity (4 Cols) */}
+        <section className="lg:col-span-4 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
+            <span className="material-symbols-outlined text-primary text-[20px]">history</span>
+            <h3 className="font-headline text-lg font-bold text-on-surface">Recent Activity</h3>
+          </div>
+
+          {!insights?.recentActivity || insights.recentActivity.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant text-xs">
+              No activity logged yet.{' '}
+              <Link to="/documents" className="text-primary font-semibold underline">
+                Upload a document
+              </Link>{' '}
+              to start.
+            </div>
+          ) : (
+            <ul className="divide-y divide-outline-variant/20">
+              {insights.recentActivity.slice(0, 6).map((a) => {
+                const kind = ACTIVITY[a.type] || { icon: FileText, text: () => a.type };
+                return (
+                  <li key={a._id} className="py-2.5 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0">
+                      <kind.icon size={15} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-on-surface truncate">{kind.text(a)}</p>
+                      {a.documentTitle && (
+                        <Link
+                          to={`/documents/${a.document}`}
+                          className="text-[11px] text-on-surface-variant hover:text-primary truncate block transition-colors"
+                        >
+                          {a.documentTitle}
+                        </Link>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-outline whitespace-nowrap font-label">
+                      {timeAgo(a.createdAt)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 };
