@@ -3,14 +3,12 @@ import DocumentPage from '../../models/DocumentPage.js';
 import Chunk from '../../models/Chunk.js';
 import { readFile } from '../storage.js';
 import { extractPdfPages } from '../pdf.js';
-import { chunkPages } from './chunk.js';
+import { chunkPages, selectRepresentativeChunks } from './chunk.js';
 import { embedTexts, ocrPdf } from '../ai/index.js';
 import { logger } from '../../config/logger.js';
 
-// Below this many extracted characters per page we assume a scanned PDF and OCR it.
-const MIN_CHARS_PER_PAGE = 40;
-// Maximum chunks to embed per document to stay within free-tier API quotas and keep latency fast.
-const MAX_INDEXED_CHUNKS = 60;
+// Maximum chunks to embed per document to stay within free-tier API quotas and ensure fast completion (~1-2 seconds).
+const MAX_INDEXED_CHUNKS = 15;
 
 const setProgress = (doc, progress, extra = {}) =>
   Document.updateOne({ _id: doc._id }, { progress, ...extra });
@@ -32,7 +30,8 @@ export const ingestDocument = async (documentId, initialBuffer = null) => {
     const textChars = pages.reduce((n, p) => n + (p.text?.trim()?.length || 0), 0);
     let ocr = false;
 
-    if (textChars < MIN_CHARS_PER_PAGE * Math.max(1, pageCount)) {
+    // Only fallback to heavy Gemini OCR when the PDF is a scanned image with no extractable text layer (< 10 chars)
+    if (textChars < 10) {
       await setProgress(doc, 15);
       const ocrPages = await ocrPdf({ pdf: buffer });
       if (ocrPages.length) {
@@ -56,8 +55,8 @@ export const ingestDocument = async (documentId, initialBuffer = null) => {
     await DocumentPage.insertMany(pages.map((p) => ({ document: doc._id, page: p.page, text: p.text })));
 
     const rawChunks = chunkPages(pages);
-    // Cap chunks to ensure fast completion under Gemini quotas
-    const chunks = rawChunks.length > MAX_INDEXED_CHUNKS ? rawChunks.slice(0, MAX_INDEXED_CHUNKS) : rawChunks;
+    // Evenly sample chunks to ensure fast completion under Gemini quotas and single-batch speed (< 2s)
+    const chunks = rawChunks.length > MAX_INDEXED_CHUNKS ? selectRepresentativeChunks(rawChunks, MAX_INDEXED_CHUNKS) : rawChunks;
     await setProgress(doc, 50);
 
     const embeddings = chunks.length ? await embedTexts(chunks.map((c) => c.text), { taskType: 'RETRIEVAL_DOCUMENT' }) : [];

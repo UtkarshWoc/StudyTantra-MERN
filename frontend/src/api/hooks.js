@@ -16,7 +16,7 @@ const get = (url) => api.get(url).then((r) => r.data);
 // ---- Documents ----
 
 // Poll while documents are being processed (text extraction, OCR, embeddings)
-const POLL_MS = 2500;
+const POLL_MS = 1200;
 
 export const useDocuments = (options = {}) =>
   useQuery({

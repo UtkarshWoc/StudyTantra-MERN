@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { startDb, stopDb, clearDb, api, registerUser, auth, uploadPdf, uploadReady, scannedPdf, samplePdf } from './helpers.js';
 import { whenIdle } from '../src/services/ingestion/queue.js';
-import { chunkPages } from '../src/services/ingestion/chunk.js';
+import { chunkPages, selectRepresentativeChunks } from '../src/services/ingestion/chunk.js';
 import { cosineSimilarity } from '../src/services/retrieval.js';
 import Document from '../src/models/Document.js';
 import Chunk from '../src/models/Chunk.js';
@@ -52,6 +52,18 @@ describe('chunking & similarity (unit)', () => {
     expect(cosineSimilarity([1, 0], [1, 0])).toBeCloseTo(1);
     expect(cosineSimilarity([1, 0], [0, 1])).toBeCloseTo(0);
     expect(cosineSimilarity([0, 0], [1, 1])).toBe(0);
+  });
+
+  it('samples chunks uniformly when exceeding maxChunks', () => {
+    const manyChunks = Array.from({ length: 60 }, (_, i) => ({ index: i, page: i + 1, text: `Chunk ${i}` }));
+    const sampled = selectRepresentativeChunks(manyChunks, 15);
+    expect(sampled.length).toBe(15);
+    expect(sampled[0].page).toBe(1);
+    expect(sampled[sampled.length - 1].page).toBe(60);
+    // Every chunk gets a consecutive re-index 0..14
+    sampled.forEach((c, idx) => expect(c.index).toBe(idx));
+    // When count <= maxChunks, returns original array unchanged
+    expect(selectRepresentativeChunks(manyChunks.slice(0, 10), 15).length).toBe(10);
   });
 });
 

@@ -114,8 +114,9 @@ export const geminiProvider = {
 
   async embed(texts, { taskType = 'RETRIEVAL_DOCUMENT', dimensions = 768 } = {}) {
     const vectors = [];
-    // Batches of 10 chunks stay safely under the free tier limit of 30,000 tokens/minute.
-    const BATCH_SIZE = 10;
+    // Batches of 15 chunks stay safely under the free tier limit of 30,000 tokens/minute
+    // and complete in a single round-trip.
+    const BATCH_SIZE = 15;
     for (let i = 0; i < texts.length; i += BATCH_SIZE) {
       if (i > 0) await new Promise((r) => setTimeout(r, 200)); // Brief stagger to prevent burst limits
       const batch = texts.slice(i, i + BATCH_SIZE);

@@ -51,3 +51,23 @@ export const chunkPages = (pages, options = {}) => {
   flush();
   return chunks;
 };
+
+/**
+ * Evenly sample chunks across the document if count exceeds maxChunks,
+ * ensuring early, middle, and late sections are uniformly indexed for RAG
+ * while staying within fast single-batch embedding limits.
+ */
+export const selectRepresentativeChunks = (chunks, maxChunks = 15) => {
+  if (!Array.isArray(chunks) || chunks.length <= maxChunks) return chunks;
+  const step = (chunks.length - 1) / (maxChunks - 1);
+  const selected = [];
+  const pickedIndices = new Set();
+  for (let i = 0; i < maxChunks; i++) {
+    const idx = Math.min(chunks.length - 1, Math.round(i * step));
+    if (!pickedIndices.has(idx)) {
+      pickedIndices.add(idx);
+      selected.push(chunks[idx]);
+    }
+  }
+  return selected.map((c, index) => ({ ...c, index }));
+};

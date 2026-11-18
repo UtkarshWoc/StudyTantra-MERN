@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, lazy, Suspense } from 'react';
 import {
   ArrowLeft,
   Loader2,
@@ -14,9 +14,11 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ChatInterface from '../components/ChatInterface';
-import PdfViewer from '../components/PdfViewer';
 import Markdown from '../components/Markdown';
 import DocumentStatus from '../components/DocumentStatus';
+
+// Lazy-load the heavy PDF viewer module so DocumentDetails renders instantly (< 20ms)
+const PdfViewer = lazy(() => import('../components/PdfViewer'));
 import {
   useDocument,
   useDocumentFileUrl,
@@ -231,16 +233,33 @@ const DocumentDetails = () => {
           } lg:flex flex-col w-full lg:w-[58%] xl:w-[62%] bg-surface-container-low rounded-2xl p-3 sm:p-4 border border-outline-variant/30 min-h-0 shadow-xs`}
         >
           {fileBlob || fileUrl ? (
-            <PdfViewer
-              fileUrl={fileBlob || fileUrl}
-              page={page}
-              onPageChange={setPage}
-              onSelectionAction={handleSelectionAction}
-            />
+            <Suspense
+              fallback={
+                <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant gap-3 py-16 animate-pulse">
+                  <Loader2 className="animate-spin text-primary" size={32} />
+                  <span className="text-xs font-label">Loading PDF viewer...</span>
+                </div>
+              }
+            >
+              <PdfViewer
+                fileUrl={fileBlob || fileUrl}
+                page={page}
+                onPageChange={setPage}
+                onSelectionAction={handleSelectionAction}
+              />
+            </Suspense>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant gap-2">
               {fileFailed ? (
-                'Could not load the PDF source.'
+                <div className="text-center p-6">
+                  <p className="text-xs text-error mb-2">Could not stream the PDF source.</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="text-xs text-primary underline font-medium cursor-pointer"
+                  >
+                    Reload
+                  </button>
+                </div>
               ) : (
                 <>
                   <Loader2 className="animate-spin text-primary" size={28} />

@@ -16,7 +16,13 @@ import {
   FileText,
 } from 'lucide-react';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+  try {
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+  } catch {
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  }
+}
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.4;
