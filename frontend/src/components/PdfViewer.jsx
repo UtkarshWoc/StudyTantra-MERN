@@ -301,9 +301,9 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
             setLoadError('Could not display this PDF.');
           }}
           loading={
-            <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-3">
-              <Loader2 className="animate-spin text-amber-500" size={32} />
-              <p className="text-xs font-medium">Loading PDF document...</p>
+            <div className="flex flex-col items-center justify-center h-64 text-on-surface-variant gap-3">
+              <Loader2 className="animate-spin text-primary" size={32} />
+              <p className="text-xs font-label">Loading PDF document...</p>
             </div>
           }
           error={<div className="p-8 text-center text-slate-500 text-sm">{loadError || 'Could not display this PDF.'}</div>}
@@ -335,7 +335,7 @@ const PdfViewer = ({ fileUrl, page = 1, onPageChange, onSelectionAction }) => {
                               style={{ width: computedPageWidth, height: Math.floor(computedPageWidth * 1.3) }}
                               className="flex items-center justify-center bg-slate-900/40 text-slate-500 text-xs"
                             >
-                              <Loader2 className="animate-spin text-amber-500 mr-2" size={16} /> Loading page {pageNum}...
+                              <Loader2 className="animate-spin text-primary mr-2" size={16} /> Loading page {pageNum}...
                             </div>
                           }
                         />

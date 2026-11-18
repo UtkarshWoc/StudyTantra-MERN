@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from './auth';
 import { api, refreshSession, setAccessToken, setSessionExpiredHandler, getErrorMessage } from '../lib/api';
+import AppLoadingScreen from '../components/AppLoadingScreen';
 
 // Day boundaries (streaks, daily goal) follow the user's timezone. Accounts
 // start on UTC; adopt the browser's timezone the first time we see them.
@@ -128,14 +129,7 @@ export const AuthProvider = ({ children }) => {
   }), [user, login, register, loginWithGoogle, logout, refreshUser, updateProfile, changePassword, deleteAccount, updatePreferences]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0b1120]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-slate-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <AppLoadingScreen message="Initializing your learning space..." />;
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

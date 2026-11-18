@@ -22,8 +22,11 @@ const PlanDetail = lazy(() => import('./pages/PlanDetail'));
 const CollectionDetail = lazy(() => import('./pages/CollectionDetail'));
 
 const PageLoader = () => (
-  <div className="flex items-center justify-center py-24">
-    <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+  <div className="flex flex-col items-center justify-center py-24 gap-3">
+    <div className="w-9 h-9 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+    <span className="text-xs font-label text-on-surface-variant animate-pulse">
+      Opening study workspace...
+    </span>
   </div>
 );
 import { AuthProvider } from './context/AuthContext';

@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/test/setup.js'],
       include: ['src/**/*.test.{js,jsx}'],
       css: false,
+      maxWorkers: 2,
     },
   }
 })
