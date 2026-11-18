@@ -10,8 +10,6 @@ import {
   Upload,
   Zap,
   MessageSquare,
-  ArrowRight,
-  TrendingUp,
 } from 'lucide-react';
 import { useDashboard, useInsights, useTogglePlanTask } from '../api/hooks';
 import ActivityHeatmap from '../components/ActivityHeatmap';
@@ -119,156 +117,9 @@ const Dashboard = () => {
   }
 
   const metrics = library?.metrics || {};
-  const dueTotal = (insights?.due?.reviews || 0) + (insights?.due?.new || 0);
 
   return (
     <div className="py-6 space-y-8 max-w-6xl mx-auto">
-      {/* Ready To Review Hero Banner */}
-      <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 sm:p-8 md:p-10 shadow-[0_2px_16px_rgba(58,48,42,0.04)] relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="relative z-10 flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="p-1 rounded-md bg-primary-fixed text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[16px]">schedule</span>
-            </span>
-            <span className="text-[11px] font-label font-bold uppercase tracking-widest text-primary">
-              Ready To Review
-            </span>
-          </div>
-
-          <div className="flex items-baseline gap-3">
-            <span className="font-headline text-5xl sm:text-6xl font-bold text-on-surface leading-none">
-              {dueTotal}
-            </span>
-            <span className="text-sm font-label text-on-surface-variant">
-              {dueTotal === 1 ? 'card waiting' : 'cards waiting'}
-            </span>
-          </div>
-
-          <p className="text-xs text-on-surface-variant mt-2 font-medium">
-            {insights?.due?.reviews || 0} due for spaced repetition · {insights?.due?.new || 0} new cards
-          </p>
-        </div>
-
-        <div className="relative z-10 shrink-0">
-          <Link
-            to="/review"
-            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label text-xs font-bold shadow-md hover:shadow-lg transition-all duration-150 transform active:scale-95 cursor-pointer"
-          >
-            <span>{dueTotal > 0 ? 'Start Daily Review' : 'Review Flashcards'}</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-      </section>
-
-      {/* Habit Telemetry Row: Streak & Daily Goal */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Streak Card */}
-        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-label font-bold uppercase tracking-wider text-on-surface-variant">
-              Daily Habit Streak
-            </span>
-            <span className="p-1.5 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">local_fire_department</span>
-            </span>
-          </div>
-
-          <div className="flex items-baseline gap-2">
-            <span className="font-headline text-3xl font-bold text-on-surface">
-              {insights?.streak?.current || 0}
-            </span>
-            <span className="text-xs font-label text-on-surface-variant">
-              {insights?.streak?.current === 1 ? 'day' : 'days'}
-            </span>
-          </div>
-
-          <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
-            {insights?.streak?.studiedToday ? (
-              <span className="text-primary font-semibold">🔥 Studied today. Nice work!</span>
-            ) : insights?.streak?.current ? (
-              'Review or complete a quiz today to extend your streak.'
-            ) : (
-              'Review a card today to ignite a study streak.'
-            )}{' '}
-            <span className="text-outline">Longest: {insights?.streak?.longest || 0} days.</span>
-          </p>
-        </section>
-
-        {/* Daily Goal Card */}
-        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col justify-between" aria-label="Daily goal">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-label font-bold uppercase tracking-wider text-on-surface-variant">
-              Today's Goal
-            </span>
-            <span className="p-1.5 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">flag</span>
-            </span>
-          </div>
-
-          <div className="my-2">
-            <GoalMeter done={insights?.goal?.done || 0} target={insights?.goal?.target || 20} />
-          </div>
-
-          <p className="text-xs text-on-surface-variant mt-2">
-            Adjust target review volume in{' '}
-            <Link to="/settings" className="text-primary font-semibold hover:underline">
-              Settings
-            </Link>
-            .
-          </p>
-        </section>
-      </div>
-
-      {/* 2-Column Split: Today's Plan & Weak Topics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Today's Plan */}
-        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
-            <span className="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
-            <h3 className="font-headline text-lg font-bold text-on-surface">Today's Study Plan</h3>
-          </div>
-          <TodaysPlan plan={insights?.todaysPlan} />
-        </section>
-
-        {/* Weak Topics */}
-        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
-            <span className="material-symbols-outlined text-tertiary text-[20px]">warning</span>
-            <h3 className="font-headline text-lg font-bold text-on-surface">Weak Topics</h3>
-          </div>
-
-          {!insights?.weakTopics || insights.weakTopics.length === 0 ? (
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              No weak areas detected yet. As you take quizzes and review cards, topics you find challenging will appear here for targeted practice.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {insights.weakTopics.slice(0, 5).map((t) => (
-                <li
-                  key={`${t.document}-${t.topic}`}
-                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-on-surface truncate">{t.topic}</p>
-                    <p className="text-[11px] text-on-surface-variant truncate">
-                      {t.documentTitle || 'Source document'} · {t.accuracy}% accuracy ({t.total} attempts)
-                    </p>
-                  </div>
-                  {t.document && (
-                    <Link
-                      to={`/quizzes?document=${t.document}&topic=${encodeURIComponent(t.topic)}`}
-                      className="text-xs font-label font-bold text-primary hover:underline whitespace-nowrap shrink-0"
-                    >
-                      Practice →
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
       {/* 4 Metric Bento Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Documents" value={metrics.totalDocuments ?? 0} icon={Folder} />
@@ -283,7 +134,7 @@ const Dashboard = () => {
         <section className="lg:col-span-8 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-[20px]">trending_up</span>
+              <span className="material-symbols-outlined text-primary text-[20px]" aria-hidden="true">trending_up</span>
               <h3 className="font-headline text-lg font-bold text-on-surface">Study Activity</h3>
             </div>
             <span className="text-[11px] font-label text-on-surface-variant">Annual History</span>
@@ -294,7 +145,7 @@ const Dashboard = () => {
         {/* Recent Activity (4 Cols) */}
         <section className="lg:col-span-4 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-3">
           <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
-            <span className="material-symbols-outlined text-primary text-[20px]">history</span>
+            <span className="material-symbols-outlined text-primary text-[20px]" aria-hidden="true">history</span>
             <h3 className="font-headline text-lg font-bold text-on-surface">Recent Activity</h3>
           </div>
 
@@ -332,6 +183,115 @@ const Dashboard = () => {
                   </li>
                 );
               })}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Habit Telemetry Row: Streak & Daily Goal */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Streak Card */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-label font-bold uppercase tracking-wider text-on-surface-variant">
+              Daily Habit Streak
+            </span>
+            <span className="p-1.5 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">local_fire_department</span>
+            </span>
+          </div>
+
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline text-3xl font-bold text-on-surface">
+              {insights?.streak?.current || 0}
+            </span>
+            <span className="text-xs font-label text-on-surface-variant">
+              {insights?.streak?.current === 1 ? 'day' : 'days'}
+            </span>
+          </div>
+
+          <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
+            {insights?.streak?.studiedToday ? (
+              <span className="text-primary font-semibold">🔥 Studied today. Nice work!</span>
+            ) : insights?.streak?.current ? (
+              'Review or complete a quiz today to extend your streak.'
+            ) : (
+              'Review a card today to ignite a study streak.'
+            )}{' '}
+            <span className="text-outline">Longest: {insights?.streak?.longest || 0} days.</span>
+          </p>
+        </section>
+
+        {/* Daily Goal Card */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col justify-between" aria-label="Daily goal">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-label font-bold uppercase tracking-wider text-on-surface-variant">
+              Today's Goal
+            </span>
+            <span className="p-1.5 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">flag</span>
+            </span>
+          </div>
+
+          <div className="my-2">
+            <GoalMeter done={insights?.goal?.done || 0} target={insights?.goal?.target || 20} />
+          </div>
+
+          <p className="text-xs text-on-surface-variant mt-2">
+            Adjust target review volume in{' '}
+            <Link to="/settings" className="text-primary font-semibold hover:underline">
+              Settings
+            </Link>
+            .
+          </p>
+        </section>
+      </div>
+
+      {/* 2-Column Split: Today's Plan & Weak Topics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Today's Plan */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
+            <span className="material-symbols-outlined text-primary text-[20px]" aria-hidden="true">calendar_today</span>
+            <h3 className="font-headline text-lg font-bold text-on-surface">Today's Study Plan</h3>
+          </div>
+          <TodaysPlan plan={insights?.todaysPlan} />
+        </section>
+
+        {/* Weak Topics */}
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
+            <span className="material-symbols-outlined text-tertiary text-[20px]" aria-hidden="true">warning</span>
+            <h3 className="font-headline text-lg font-bold text-on-surface">Weak Topics</h3>
+          </div>
+
+          {!insights?.weakTopics || insights.weakTopics.length === 0 ? (
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              No weak areas detected yet. As you take quizzes and review cards, topics you find challenging will appear here for targeted practice.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {insights.weakTopics.slice(0, 5).map((t) => (
+                <li
+                  key={`${t.document}-${t.topic}`}
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-on-surface truncate">{t.topic}</p>
+                    <p className="text-[11px] text-on-surface-variant truncate">
+                      {t.documentTitle || 'Source document'} · {t.accuracy}% accuracy ({t.total} attempts)
+                    </p>
+                  </div>
+                  {t.document && (
+                    <Link
+                      to={`/quizzes?document=${t.document}&topic=${encodeURIComponent(t.topic)}`}
+                      className="text-xs font-label font-bold text-primary hover:underline whitespace-nowrap shrink-0"
+                    >
+                      Practice →
+                    </Link>
+                  )}
+                </li>
+              ))}
             </ul>
           )}
         </section>

@@ -100,7 +100,7 @@ const PlanDetail = () => {
           <div className="flex items-center justify-between text-xs font-label mb-2">
             <span className="font-bold uppercase tracking-wider text-on-surface-variant">Progress</span>
             <span className="font-semibold text-primary">
-              {done} of {tasks.length} tasks complete ({pct}%)
+              {done}/{tasks.length} done ({pct}%)
             </span>
           </div>
           <div

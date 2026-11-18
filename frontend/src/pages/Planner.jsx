@@ -111,7 +111,7 @@ const CreatePlanForm = ({ onCreated }) => {
                       : 'border-outline-variant/40 bg-surface-container-low text-on-surface-variant hover:border-outline'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[14px]">{on ? 'check' : 'add'}</span>
+                  <span className="material-symbols-outlined text-[14px]" aria-hidden="true">{on ? 'check' : 'add'}</span>
                   <span>{d.title}</span>
                 </button>
               );

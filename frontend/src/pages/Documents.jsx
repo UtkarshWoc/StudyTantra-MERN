@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import DocumentCard from '../components/DocumentCard';
 import UploadModal from '../components/UploadModal';
 import {
@@ -52,6 +52,15 @@ const CollectionsBar = ({ collections, active, onSelect, total, unsorted }) => {
           <button className={chip(active === c._id)} onClick={() => onSelect(c._id)}>
             {c.name} · {c.documentCount}
           </button>
+          {active === c._id && (
+            <Link
+              to={`/collections/${c._id}`}
+              className="ml-1 inline-flex items-center gap-1 text-xs font-label font-bold text-primary hover:underline transition-colors"
+            >
+              <span className="material-symbols-outlined text-[14px]" aria-hidden="true">folder_open</span>
+              <span>Open</span>
+            </Link>
+          )}
         </span>
       ))}
 

@@ -63,7 +63,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-6 px-1`}>
           <a href="/dashboard" className="flex items-center gap-3 group" aria-label="StudyTantra Home">
             <div className="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center text-primary shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-[22px]">local_library</span>
+              <span className="material-symbols-outlined text-[22px]" aria-hidden="true">local_library</span>
             </div>
             {!isCollapsed && (
               <div>
@@ -111,6 +111,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               {({ isActive }) => (
                 <>
                   <span
+                    aria-hidden="true"
                     className={`material-symbols-outlined text-[20px] ${
                       isCollapsed ? 'mx-auto' : 'mr-3'
                     } shrink-0 transition-transform duration-200 group-hover:scale-110 ${
@@ -156,6 +157,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               {({ isActive }) => (
                 <>
                   <span
+                    aria-hidden="true"
                     className={`material-symbols-outlined text-[20px] ${
                       isCollapsed ? 'mx-auto' : 'mr-3'
                     } shrink-0 transition-transform duration-200 group-hover:scale-110 ${
