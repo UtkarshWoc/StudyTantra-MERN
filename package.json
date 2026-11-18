@@ -3,15 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "license": "ISC",
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "npm start --workspace=backend",
-    "build": "npm install"
+    "start": "npm --prefix backend start",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix backend test && npm --prefix frontend test",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
   }
 }
