@@ -104,6 +104,7 @@ const CreatePlanForm = ({ onCreated }) => {
                   key={d._id}
                   type="button"
                   aria-pressed={on}
+                  aria-label={d.title}
                   onClick={() => toggleDoc(d._id)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-label font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
                     on
@@ -111,7 +112,7 @@ const CreatePlanForm = ({ onCreated }) => {
                       : 'border-outline-variant/40 bg-surface-container-low text-on-surface-variant hover:border-outline'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[14px]">{on ? 'check' : 'add'}</span>
+                  <span className="material-symbols-outlined text-[14px]" aria-hidden="true">{on ? 'check' : 'add'}</span>
                   <span>{d.title}</span>
                 </button>
               );
