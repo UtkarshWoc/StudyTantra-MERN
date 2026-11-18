@@ -79,19 +79,22 @@ const TodaysPlan = ({ plan }) => {
   );
 };
 
-const StatCard = ({ label, value, icon: Icon }) => (
-  <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm flex flex-col justify-between">
-    <div className="flex items-start justify-between">
-      <span className="text-[10px] uppercase tracking-wider font-label font-bold text-on-surface-variant">
-        {label}
-      </span>
-      <div className="p-2 rounded-xl bg-primary-fixed text-primary flex items-center justify-center">
-        <Icon size={18} />
+const StatCard = ({ label, value, icon }) => {
+  const Icon = icon;
+  return (
+    <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm flex flex-col justify-between">
+      <div className="flex items-start justify-between">
+        <span className="text-[10px] uppercase tracking-wider font-label font-bold text-on-surface-variant">
+          {label}
+        </span>
+        <div className="p-2 rounded-xl bg-primary-fixed text-primary flex items-center justify-center">
+          <Icon size={18} />
+        </div>
       </div>
+      <p className="font-headline text-3xl font-bold text-on-surface mt-3">{value}</p>
     </div>
-    <p className="font-headline text-3xl font-bold text-on-surface mt-3">{value}</p>
-  </div>
-);
+  );
+};
 
 const Dashboard = () => {
   const { data: library } = useDashboard();

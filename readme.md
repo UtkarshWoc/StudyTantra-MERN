@@ -242,7 +242,7 @@ Citations are stored with each model message. Clicking one in the UI opens the P
 
 > **Workspace & Dependency Architecture**:
 > The repo root declares npm workspaces, but `backend/` and `frontend/` each maintain their own independent lockfile. The root `package-lock.json` is intentionally excluded from Git to prevent workspace peer collisions.
-> In Node 22 / npm 10+, always install using `--workspaces=false --legacy-peer-deps` so optional peer dependencies (such as MongoDB's GCP KMS peers) resolve deterministically.
+> In Node 22 / npm 10+, always install using `--workspaces=false` so each workspace resolves deterministically with its independent lockfile.
 
 ### Run the full stack
 
@@ -251,13 +251,13 @@ Citations are stored with each model message. Clicking one in the UI opens the P
 cd backend
 cp .env.example .env          # Windows cmd: copy .env.example .env
 # Edit .env: MONGO_URI, JWT_SECRET (16+ chars), GEMINI_API_KEY, and Cloudinary keys or STORAGE_DRIVER=local
-npm install --workspaces=false --legacy-peer-deps
+npm install --workspaces=false
 npm run dev                   # http://localhost:5000  (nodemon)
 
 # 2. Frontend (second terminal)
 cd frontend
 cp .env.example .env          # VITE_API_URL=http://localhost:5000
-npm install --workspaces=false --legacy-peer-deps
+npm install --workspaces=false
 npm run dev                   # http://localhost:5173
 ```
 
@@ -645,8 +645,8 @@ cd backend  && npm run smoke:gemini    # optional, uses your real key
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and on pushes to `main`, on Node 22:
 
-1. **backend**: runs `npm ci --workspaces=false --legacy-peer-deps` and `npm test` (73 tests across 7 test suites, using in-memory MongoDB). `vite` is explicitly pinned in `backend/package.json`'s `devDependencies` so Vitest resolves in isolated peer-dep environments.
-2. **frontend**: runs `npm ci --workspaces=false --legacy-peer-deps`, `npm run lint`, `npm test` (20 tests across 9 test suites), and `npm run build`. `@testing-library/dom` is explicitly declared in `frontend/package.json`'s `devDependencies` for Jest-DOM compatibility.
+1. **backend**: runs `npm ci --workspaces=false` and `npm test` (73 tests across 7 test suites, using in-memory MongoDB). `vite` is explicitly pinned in `backend/package.json`'s `devDependencies` so Vitest resolves in isolated peer-dep environments.
+2. **frontend**: runs `npm ci --workspaces=false`, `npm run lint`, `npm test` (20 tests across 9 test suites), and `npm run build`. `@testing-library/dom` is explicitly declared in `frontend/package.json`'s `devDependencies` for Jest-DOM compatibility.
 3. **e2e**: after the two above pass, installs Chromium and runs Playwright; uploads traces as an artifact on failure.
 
 The Gemini smoke test is intentionally excluded from CI.
@@ -739,10 +739,10 @@ Phases 0 to 3 of [`docs/plans/level-up-and-productization-plan.md`](docs/plans/l
 | Document stays on "Processing" | Check the server log. Large or scanned PDFs take longer. If it is `failed`, use Retry |
 | "This document is still being processed" | Chat and generation wait for `status: ready` |
 | No verification or reset email arrives | `RESEND_API_KEY` is unset, so the link was written to the server log. Set the key and a verified `EMAIL_FROM` |
-| `npm install` behaves oddly at the repo root | Each package has its own lockfile. Install inside `backend/` and `frontend/` with `--workspaces=false --legacy-peer-deps`. Do not commit a root `package-lock.json` |
+| `npm install` behaves oddly at the repo root | Each package has its own lockfile. Install inside `backend/` and `frontend/` with `--workspaces=false`. Do not commit a root `package-lock.json` |
 | `npm ci` fails with `Missing: gcp-metadata from lock file` | npm 10 peer dependency conflict with MongoDB and Google Cloud SDKs. Use `--legacy-peer-deps` on `npm ci` and ensure no accidental root `package-lock.json` is committed |
 | Vitest fails with `Cannot find package 'vite'` or `'@testing-library/dom'` | Peer dependencies skipped during legacy install. Ensure `"vite"` is in `backend/package.json` devDependencies and `"@testing-library/dom"` is in `frontend/package.json` devDependencies |
-| Vite dev server fails with `Cannot find module .../dist.js` | Concurrently running `npm install` while `vite` was executing on Windows locked native binaries. Stop Vite and run `npm install --workspaces=false --legacy-peer-deps` in `frontend` |
+| Vite dev server fails with `Cannot find module .../dist.js` | Concurrently running `npm install` while `vite` was executing on Windows locked native binaries. Stop Vite and run `npm install --workspaces=false` in `frontend` |
 | Google button missing | Set both `GOOGLE_CLIENT_ID` (backend) and `VITE_GOOGLE_CLIENT_ID` (frontend) to the same OAuth client ID |
 | Hourly AI limit reached | Raise `AI_RATE_LIMIT_PER_HOUR`, or wait for the window to reset |
 
