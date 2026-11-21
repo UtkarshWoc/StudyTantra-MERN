@@ -3,9 +3,9 @@ import { ThemeContext } from './theme';
 
 const readSavedTheme = () => {
   try {
-    return localStorage.getItem('app-theme') || 'system';
+    return localStorage.getItem('app-theme') || 'dark';
   } catch {
-    return 'system';
+    return 'dark';
   }
 };
 
