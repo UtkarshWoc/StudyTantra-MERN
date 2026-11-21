@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUploadDocument } from '../api/hooks';
 import { getErrorMessage } from '../lib/api';
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 4.5 * 1024 * 1024;
 
 const UploadModal = ({ isOpen, onClose }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -47,7 +47,7 @@ const UploadModal = ({ isOpen, onClose }) => {
       return;
     }
     if (file.size > MAX_BYTES) {
-      setErrorMsg('File is too large (maximum 10MB).');
+      setErrorMsg('File is too large (maximum 4.5MB for deployed serverless hosting). Please choose a smaller PDF.');
       return;
     }
     if (file.size === 0) {
@@ -67,7 +67,14 @@ const UploadModal = ({ isOpen, onClose }) => {
           }, 1200);
         },
         onError: (error) => {
-          setErrorMsg(getErrorMessage(error, 'Error uploading file. Please try again.'));
+          const isNetworkError = !error?.response || error?.message === 'Network Error' || error?.code === 'ERR_NETWORK';
+          if (isNetworkError) {
+            setErrorMsg(
+              'Upload failed (Network Error). On deployed hosting (Vercel), requests over 4.5MB or server cold-starts cause the edge proxy to drop the connection. Please ensure your PDF is under 4.5MB and try again.'
+            );
+          } else {
+            setErrorMsg(getErrorMessage(error, 'Error uploading file. Please try again.'));
+          }
           if (fileInputRef.current) fileInputRef.current.value = '';
         },
       }
@@ -154,7 +161,7 @@ const UploadModal = ({ isOpen, onClose }) => {
                   </label>
 
                   <span className="text-[11px] text-outline font-label mt-4">
-                    Maximum file size: 10MB • Format: PDF
+                    Maximum file size: 4.5MB • Format: PDF
                   </span>
                 </>
               )}

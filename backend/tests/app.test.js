@@ -13,6 +13,14 @@ describe('CORS', () => {
     const res = await api().get('/').set('Origin', 'https://study-tantra-mern.vercel.app.evil.com');
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
+
+  it('allows vercel deployment origins while rejecting evil.com', async () => {
+    const previewRes = await api().get('/').set('Origin', 'https://study-tantra-mern-git-feat.vercel.app');
+    expect(previewRes.headers['access-control-allow-origin']).toBe('https://study-tantra-mern-git-feat.vercel.app');
+
+    const evilRes = await api().get('/').set('Origin', 'https://study-tantra-mern-git-feat.vercel.app.evil.com');
+    expect(evilRes.headers['access-control-allow-origin']).toBeUndefined();
+  });
 });
 
 describe('health', () => {

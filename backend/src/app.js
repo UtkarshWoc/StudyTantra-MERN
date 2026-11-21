@@ -28,6 +28,7 @@ app.set('trust proxy', 1);
 const normalizeOrigin = (o) => o.trim().replace(/\/+$/, '').toLowerCase();
 
 const LOCALHOST_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+const VERCEL_PREVIEW_PATTERN = /^https:\/\/(?:[a-z0-9-]+\.)*study-tantra-mern(?:-[a-z0-9-]+)*\.vercel\.app$/i;
 
 const allowedOrigins = new Set([
   'http://localhost:5173',
@@ -46,6 +47,9 @@ app.use(cors({
     if (!origin) return callback(null, true);
     const normalized = normalizeOrigin(origin);
     if (!isProd && LOCALHOST_PATTERN.test(normalized)) {
+      return callback(null, true);
+    }
+    if (VERCEL_PREVIEW_PATTERN.test(normalized)) {
       return callback(null, true);
     }
     callback(null, allowedOrigins.has(normalized));

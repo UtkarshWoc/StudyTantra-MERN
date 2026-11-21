@@ -74,6 +74,9 @@ export const getErrorMessage = (error, fallback = 'Something went wrong. Please 
       return data;
     }
   }
+  if (error?.message === 'Network Error' || error?.code === 'ERR_NETWORK') {
+    return 'Network Error: Unable to reach the server. Please check your internet connection or verify the deployed backend is active.';
+  }
   return error?.message || fallback;
 };
 

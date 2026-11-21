@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
-import { api, setAccessToken, getAccessToken, setSessionExpiredHandler } from './api';
+import { api, setAccessToken, getAccessToken, setSessionExpiredHandler, getErrorMessage } from './api';
 
 // Fake transport for the `api` instance: a token is "valid" only if it is the current one.
 const installAdapter = (validToken) => {
@@ -65,5 +65,11 @@ describe('api client', () => {
 
     await expect(api.post('/auth/login', {})).rejects.toBeTruthy();
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it('formats network errors with helpful context', () => {
+    expect(getErrorMessage(new Error('Network Error'))).toMatch(/Unable to reach the server/i);
+    expect(getErrorMessage({ message: 'random error' })).toBe('random error');
+    expect(getErrorMessage({ response: { data: { message: 'Custom API error' } } })).toBe('Custom API error');
   });
 });
