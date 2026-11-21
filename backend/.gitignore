@@ -1,3 +1,5 @@
 .env
 # Local file storage (STORAGE_DRIVER=local)
 uploads/
+node_modules/
+dist/
