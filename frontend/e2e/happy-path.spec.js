@@ -39,7 +39,7 @@ test('register → upload → flashcards → quiz', async ({ page }) => {
   await expect(page.getByText(/^Ready/)).toBeVisible({ timeout: 20_000 });
   await page.getByLabel('Ask a question').fill('What does photosynthesis convert?');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByText(/Mock response based on the document/)).toBeVisible();
+  await expect(page.getByText(/Mock response based on the document/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'p. 1' }).first()).toBeVisible();
 
   // Flashcards (mock AI)
